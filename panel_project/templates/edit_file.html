@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit File</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/container.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>Edit File: {{ file_name }}</h1>
+        <form action="{% url 'edit_file' file_name=file_name %}" method="post">
+            {% csrf_token %}
+            <textarea name="file_content" rows="60" cols="20">{{ file_content }}</textarea>
+            <br>
+            <button type="submit">Save</button>
+        </form>
+    </div>
+</body>
+</html>

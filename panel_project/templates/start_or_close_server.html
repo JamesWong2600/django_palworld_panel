@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit File</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/container.css' %}">
+</head>
+<body>
+     <form action="{% url 'execute_exe' file_name='PalServer.exe' %}" method="post">
+        {% csrf_token %}
+        <button type="submit">Start or Close Server</button>
+     </form>
+</body>
+</html>

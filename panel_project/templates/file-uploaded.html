@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>File Uploaded</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/container.css' %}">
+    <script>
+        function openEditWindow(fileName) {
+            window.open('/edit/' + fileName, 'Edit File', 'width=1200,height=500');
+        }
+        function openRenameWindow(fileName) {
+            window.open('/rename/' + fileName, 'Rename File', 'width=400,height=200');
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>File Uploaded Successfully</h1>
+        <div class="file-list">
+            <h2>Uploaded Files:</h2>
+            <ul>
+                {% for file in files %}
+                    <li>
+                        {{ file }}
+                        <button onclick="openEditWindow('{{ file }}')">Edit</button>
+                        <a href="{% url 'delete_file' file %}"><button>Delete</button></a>
+                        <a href="{% url 'download_file' file %}"><button>Download</button></a>
+                        <button onclick="openRenameWindow('{{ file }}')">Rename</button>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

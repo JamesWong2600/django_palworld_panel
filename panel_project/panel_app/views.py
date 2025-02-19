@@ -11,6 +11,36 @@ import redis
 import shutil
 from py_class.file_option import  edit_file, delete_file, rename_file
 from py_class.start_or_close_server import execute_exe
+from py_class.read_palworld_config.get_config import get_config_data, read_all_text
+import ast
+
+
+r = redis.Redis(host='localhost', port=6379, db=0)
+
+def change_server_settings(request):
+    if request.method == 'POST':
+        for key, value in request.POST.items():
+            r.set(key, value)
+
+
+
+def server_settings(request):
+    file_path = os.path.join(settings.MEDIA_ROOT, 'PalWorldSettings.ini')
+    config_text = read_all_text(file_path)
+    config_text = config_text.replace("[/Script/Pal.PalGameWorldSettings]",'')
+    config_text = config_text.replace("OptionSettings=(",'')
+    config_text = config_text.replace(")",'')
+    config_list = [item.strip() for item in config_text.split(',')]
+    names = []
+    values = []
+    for selection in config_list:
+        name, value = selection.split('=', 1)
+        names.append(name.strip())
+        values.append(value.strip())
+        r.set(name, value)
+    combined_list = zip(names, values)
+    return render(request, 'server_setting.html', {'combined_list': combined_list})
+
 
 def edit_file_view(request, file_name):
     file_path = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90','server', file_name)

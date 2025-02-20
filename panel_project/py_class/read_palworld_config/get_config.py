@@ -22,7 +22,7 @@ def read_all_text(file_path):
         return file.read()
 
 
-def read_all_text(file_path):
+def write_all_text(file_path):
     with open(file_path, 'w') as file:
         return file.write()
 

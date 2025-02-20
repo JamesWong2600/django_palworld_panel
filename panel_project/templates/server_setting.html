@@ -7,22 +7,23 @@
 <link rel="stylesheet" type="text/css" href="{% static 'css/server_settings.css' %}">
 <body>
     <h2>Configuration Settings</h2>
-    <table border="1">
-        <tr>
-            <th>Setting</th>
-            <th>Value</th>
-            <th>Action</th>
-        </tr>
-        <form action="change_setting" method="post">
-            {% csrf_token %}
-        {% for name, value in combined_list %}
-        <tr>
-            <td><input type="hidden" id="name" name="name" value="{{ name }}">{{ name }}</td>
-            <td><input type="text" id="value" name="value" value="{{ value }}" required></td>
-        </tr>
-        <button type="submit">Save</button>
-        {% endfor %}
-        </form>
-    </table>
+        <table>
+            <tr>
+                <th>Setting</th>
+                <th>Value</th>
+            </tr>
+            {% for name, value in combined_list %}
+            <tr>
+                <form action="{% url 'change_server_settings' %}" method="post">
+                {% csrf_token %}
+                <td><input type="hidden" id="name" name="name" value="{{ name }}">{{ name }}</td>
+                <td><input type="text" id="value" name="value" value="{{ value }}" required></td>
+                <td><button type="submit">Save</button></td>
+                </form>
+            </tr>
+            {% endfor %}
+        </table>
+
+
 </body>
 </html>

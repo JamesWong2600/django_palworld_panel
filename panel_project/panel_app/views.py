@@ -15,147 +15,36 @@ from py_class.read_palworld_config.get_config import get_config_data, read_all_t
 import ast
 import sqlite3
 from configparser import ConfigParser
+from py_class.servers.check_server import check_server
+from py_class.users_information.account import account
+from py_class.servers.config_settings.config_settings import *
+
+account()
+check_server()
+
+def update_settings(request, file_path, section, value, new_name, content):
+    edit_file(file_path, new_content=None)
+    delete_file(file_path)
+    download_file(file_path)
+    rename_file(file_path, new_name)
+    change_server_settings(request)
+    create_new_file(file_path, content)
+    remove_file(file_path)
+    write_string_to_first_line(file_path, content)
+    write_string_to_second_line(file_path, content)
+    write_all_text(file_path, section, value)
+    server_settings(request)
+    read_all_text(file_path)
+    write_all_text(file_path)
+
 
 conn = sqlite3.connect('setting_data.db', check_same_thread=False)
-
-r = redis.Redis(host='localhost', port=6379, db=0)
-
-def change_server_settings(request):
-    name = request.POST.get('name')
-    value = request.POST.get('value')
-    print(name)
-    print(value)
-    cursor = conn.cursor()
-    cursor.execute('''UPDATE users SET value = ? WHERE name = ?''', (value, name))
-    conn.commit()
-    cursor = conn.cursor()
-    cursor2 = conn.cursor()
-    cursor3 = conn.cursor()
-    cursor.execute('SELECT name, value FROM users')
-    cursor2.execute('SELECT name FROM users')
-    cursor3.execute('SELECT value FROM users')
-    all = cursor.fetchall()
-    names = cursor2.fetchall()
-    values = cursor3.fetchall()
-    names_list=[]
-    values_list=[]
-    for name in names:
-        name = str(name).replace("('", "")
-        name = name.replace("',)", "")
-        names_list.append(name)
-    for value in values:
-        value = str(value).replace("('", "")
-        value = value.replace("',)", "")
-        values_list.append(value)
-    combined_list = zip(names_list, values_list)
-    all = str(all).replace("', '","=")
-    all = all.replace("('", "")
-    all = all.replace("')", "")
-    all = all.replace("[", "OptionSettings=(")
-    all = all.replace("]", ")")
-    new_file_path = os.path.join(settings.MEDIA_ROOT, 'changed_palworld_setting', 'PalWorldSettings.txt')
-    create_new_file(new_file_path, '')
-    write_string_to_second_line(os.path.join(settings.MEDIA_ROOT,'changed_palworld_setting', 'PalWorldSettings.txt'), all)
-    old_file_path = os.path.join(settings.MEDIA_ROOT, 'changed_palworld_setting', 'PalWorldSettings.txt')
-    new_file_name = 'PalWorldSettings.ini'
-    rename_file(old_file_path, new_file_name)
-    write_string_to_first_line(os.path.join(settings.MEDIA_ROOT,'changed_palworld_setting', 'PalWorldSettings.ini'), '[/Script/Pal.PalGameWorldSettings]')
-    print(all)
-    return render(request, 'server_setting.html', {'combined_list': combined_list})
-
-def create_new_file(file_path, content):
-    with open(file_path, 'w') as file:
-        file.write(content)
+server_conn = sqlite3.connect('servers.db', check_same_thread=False)
+account_conn = sqlite3.connect('account.db', check_same_thread=False)
 
 
-def remove_file(file_path):
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        print(f"File {file_path} has been removed.")
-    else:
-        print(f"File {file_path} does not exist.")        
-
-def write_string_to_first_line(file_path, content):
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-    lines.insert(0, content + '\n')
-    
-    with open(file_path, 'w') as file:
-        file.writelines(lines)
-
-def write_string_to_second_line(file_path, content):
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-    lines.insert(1, content + '\n')
-    
-    with open(file_path, 'w') as file:
-        file.writelines(lines)
 
 
-def write_all_text(file_path, section, value):
-    config = ConfigParser()
-    config.read(file_path)
-    if not config.has_section(section):
-        config.add_section(section)
-    config.set(section, '', value)
-    with open(file_path, 'w') as file:
-        config.write(file)
-
-
-def server_settings(request):
-    file_path = os.path.join(settings.MEDIA_ROOT, 'PalWorldSettings.ini')
-    config_text = read_all_text(file_path)
-    config_text = config_text.replace("[/Script/Pal.PalGameWorldSettings]",'')
-    config_text = config_text.replace("OptionSettings=(",'')
-    config_text = config_text.replace(")",'')
-    config_list = [item.strip() for item in config_text.split(',')]
-    names = []
-    values = []
-    combined_list = []
-    cursor = conn.cursor()
-    cursor.execute('''
-    SELECT name FROM sqlite_master WHERE type='table' AND name='users';
-    ''')
-    table_exists = cursor.fetchone()
-    if not table_exists:
-        for selection in config_list:
-            if '=' in selection:
-                name, value = selection.split('=', 1)
-                names.append(name.strip())
-                values.append(value.strip())
-                cursor = conn.cursor()
-                cursor.execute(f'''
-                CREATE TABLE IF NOT EXISTS users(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                value TEXT  NOT NULL
-                )
-                ''')
-                cursor.execute('''
-                INSERT INTO users (name, value)
-                VALUES (?, ?)
-                ''', (name, value))
-                conn.commit()
-                combined_list = zip(names, values)
-    else:
-        cursor2 = conn.cursor()
-        cursor3 = conn.cursor()
-        cursor2.execute('SELECT name FROM users')
-        cursor3.execute('SELECT value FROM users')
-        names = cursor2.fetchall()
-        values = cursor3.fetchall()
-        names_list=[]
-        values_list=[]
-        for name in names:
-            name = str(name).replace("('", "")
-            name = name.replace("',)", "")
-            names_list.append(name)
-        for value in values:
-            value = str(value).replace("('", "")
-            value = value.replace("',)", "")
-            values_list.append(value)
-        combined_list = zip(names_list, values_list)
-    return render(request, 'server_setting.html', {'combined_list': combined_list})
 
 
 def edit_file_view(request, file_name):
@@ -205,8 +94,32 @@ def register_view(request):
     return render(request, 'register.html')
 
 def main_page(request):
-    return render(request, 'main.html')
+    cursor = server_conn.cursor()
+    cursor.execute('SELECT * FROM servers')
+    rows = cursor.fetchall()
+    print(str(rows))
+    if str(rows) == "[]":
+        return render(request, 'main.html')
+    return HttpResponse('already have a server')
 
+def login_account(request):
+    username = request.POST['username']
+    password = request.POST['password']
+    ip = get_client_ip(request)
+    cursor = account_conn.cursor()
+    update_cursor = account_conn.cursor()
+    cursor.execute('SELECT * FROM accounts where username = ? and password = ?', (username, password))
+    update_cursor.execute('''UPDATE accounts SET ip_address = ? WHERE username = ? and password = ?''', (ip, username, password))
+    account_conn.commit()
+    rows = cursor.fetchall()
+    
+    if str(rows) == "[]":
+        error = 'username or password is incorrect'
+        return render(request, 'login.html', {'error': error})
+    else:
+        return redirect('main')
+        
+    
 def file_uploaded(request):
     server_file_path = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90', 'server')
     print(server_file_path)
@@ -224,17 +137,35 @@ def register(request):
     username = request.POST['username']
     email = request.POST['email']
     password = request.POST['password']
+    ip = get_client_ip(request)
     confirm_password = request.POST['confirm_password']
     if password == confirm_password:
+        cursor = account_conn.cursor()
+        cursor.execute('''
+        INSERT INTO accounts (username, email, password, ip_address, login_status)
+        VALUES (?, ?, ?, ?, ?)
+        ''', (username, email, password, ip, '1'))
+        account_conn.commit()
         return redirect('main')
     else:
         return render(request, 'register.html')
+    
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
 
 def upload_file(request):
     file = request.FILES['file']
+    servername = request.POST['servername']
     filename = None
     subdirectory = generate_random_string()
-    server_file_path = os.path.join(settings.MEDIA_ROOT, subdirectory, 'server')
+    print(settings.MEDIA_ROOT)
+    print(subdirectory)
+    server_file_path = os.path.join(settings.MEDIA_ROOT, subdirectory, servername)
     backup_zip_path = os.path.join(settings.MEDIA_ROOT, subdirectory, 'backup')
     os.makedirs(server_file_path, exist_ok=True)
     os.makedirs(backup_zip_path, exist_ok=True)
@@ -245,6 +176,11 @@ def upload_file(request):
            fs.save(file.name, file)
            file_path = fs.path(file.name)
            with zipfile.ZipFile(file_path, 'r') as zip_ref:
+               cursor = server_conn.cursor()
+               cursor.execute('''
+                INSERT INTO servers (file_name, server_name, server_id)
+                VALUES (?, ?, ?)
+            ''', (filename, servername, subdirectory))
                zip_ref.extractall(server_file_path)
                print(filename)
                return redirect('file_uploaded')

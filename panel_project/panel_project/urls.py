@@ -1,8 +1,8 @@
 from django.contrib import admin
 from django.urls import path
 from panel_app.views import upload_file, login_view, register_view, register, main_page, file_uploaded, edit_file_view
-from panel_app.views import delete_file_view, download_file_view, rename_file_view, start_or_close_server, server_control, execute_exe_view, server_settings, change_server_settings
-
+from panel_app.views import delete_file_view, download_file_view, rename_file_view, start_or_close_server, server_control, execute_exe_view, server_settings
+from panel_app.views import change_server_settings, login_view, login_account
 urlpatterns = [
     path('main/', main_page, name='main'),
     path('login/', login_view, name='login'),
@@ -20,4 +20,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('server_settings/', server_settings, name='server_settings'),    
     path('change_server_settings/', change_server_settings, name='change_server_settings'),
+    path('login/', login_view, name='login'),
+    path('login_account/', login_account, name='login_account'),
 ]

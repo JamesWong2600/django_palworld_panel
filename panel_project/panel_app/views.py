@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.core.files.storage import FileSystemStorage
 from django.http import FileResponse
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 import zipfile
 import os
 from django.conf import settings
@@ -18,6 +18,8 @@ from configparser import ConfigParser
 from py_class.servers.check_server import check_server
 from py_class.users_information.account import account
 from py_class.servers.config_settings.config_settings import *
+from py_class.users_information.register.register import register
+from py_class.users_information.login.login_and_logout import login_account, logout
 
 account()
 check_server()
@@ -37,6 +39,10 @@ def update_settings(request, file_path, section, value, new_name, content):
     read_all_text(file_path)
     write_all_text(file_path)
 
+def authentication(request):
+    register(request)
+    logout(request)
+    login_account(request)
 
 conn = sqlite3.connect('setting_data.db', check_same_thread=False)
 server_conn = sqlite3.connect('servers.db', check_same_thread=False)
@@ -63,16 +69,59 @@ def delete_file_view(request, file_name):
     return redirect('file_uploaded')
 
 def download_file_view(request, file_name):
-    file_path = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90','server', file_name)
-    return FileResponse(open(file_path, 'rb'))
+    file_name = request.GET['file']
+    print("downloaded " +file_name)
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    print(username+ " name")
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    for rowrow in server_cursor.fetchall():
+        server_id = rowrow[0]
+        servername = rowrow[1]
+    file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, file_name)
+    print(file_name+ " file name")
+    try:
+        if os.path.isdir(file_path):
+            # Create a zip file of the folder
+            zip_file_path = file_path + '.zip'
+            shutil.make_archive(file_path, 'zip', file_path)
+            return FileResponse(open(zip_file_path, 'rb'), as_attachment=True, filename=os.path.basename(zip_file_path))
+        else:
+            return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=os.path.basename(file_path))
+    except FileNotFoundError:
+        raise Http404("File not found")
+    except PermissionError:
+        return HttpResponse("Permission denied", status=403)
+
 
 def rename_file_view(request, file_name):
-    if request.method == 'POST':
-        new_name = request.POST['new_name']
-        file_path = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90','server', file_name)
-        rename_file(file_path, new_name)
-        return redirect('file_uploaded')
-    return render(request, 'rename_file.html', {'file_name': file_name})    
+    ip = get_client_ip(request)
+    print(file_name)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    print(username+ " name")
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    for rowrow in server_cursor.fetchall():
+        server_id = rowrow[0]
+        servername = rowrow[1]
+    file_path = os.path.join(settings.MEDIA_ROOT, server_id , servername)
+    rename_file(file_path, file_name)
+    return render(request, 'rename_file_view.html', {'file_name': servername})
+
+
+
+def rename_file(file_path, new_name):
+    if os.path.exists(file_path):
+        print(file_path)
+        new_path = os.path.join(os.path.dirname(file_path), new_name)
+        os.rename(file_path, new_path)
     
 def list_folders(directory):
     folders = []
@@ -94,38 +143,43 @@ def register_view(request):
     return render(request, 'register.html')
 
 def main_page(request):
-    cursor = server_conn.cursor()
-    cursor.execute('SELECT * FROM servers')
-    rows = cursor.fetchall()
-    print(str(rows))
-    if str(rows) == "[]":
-        return render(request, 'main.html')
-    return HttpResponse('already have a server')
-
-def login_account(request):
-    username = request.POST['username']
-    password = request.POST['password']
     ip = get_client_ip(request)
-    cursor = account_conn.cursor()
-    update_cursor = account_conn.cursor()
-    cursor.execute('SELECT * FROM accounts where username = ? and password = ?', (username, password))
-    update_cursor.execute('''UPDATE accounts SET ip_address = ? WHERE username = ? and password = ?''', (ip, username, password))
-    account_conn.commit()
+    user_cursor = account_conn.cursor()
+    print(ip)
+    cursor = server_conn.cursor()
+    user_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
     rows = cursor.fetchall()
-    
+    for row in user_cursor.fetchall():
+        username = row[0]
+    cursor.execute(f"SELECT * FROM servers where owner = '{username}'")
+    print(username)
     if str(rows) == "[]":
-        error = 'username or password is incorrect'
-        return render(request, 'login.html', {'error': error})
+        return render(request, 'main.html',{'username': username})
     else:
-        return redirect('main')
+        return HttpResponse('already have a server')
+
+
         
     
 def file_uploaded(request):
-    server_file_path = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90', 'server')
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    print(username+ " name")
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    for rowrow in server_cursor.fetchall():
+        server_id = rowrow[0]
+        servername = rowrow[1]
+    print(server_id)
+    print(servername)
+    server_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername)
     print(server_file_path)
-    server_file_path_branch = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90', '8Pd0j4fKCO90')
-    server_file_path2 = server_file_path.replace(server_file_path_branch, '')
-    print(server_file_path2)
+    #server_file_path_branch = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90', '8Pd0j4fKCO90')
+    #server_file_path2 = server_file_path.replace(server_file_path_branch, '')
+    print(server_file_path)
     folders = list_folders(server_file_path)
     folders2 = []
     for fold in folders:
@@ -133,22 +187,7 @@ def file_uploaded(request):
         folders2.append(fold)
     return render(request, 'file-uploaded.html', {'files': folders2})
 
-def register(request):
-    username = request.POST['username']
-    email = request.POST['email']
-    password = request.POST['password']
-    ip = get_client_ip(request)
-    confirm_password = request.POST['confirm_password']
-    if password == confirm_password:
-        cursor = account_conn.cursor()
-        cursor.execute('''
-        INSERT INTO accounts (username, email, password, ip_address, login_status)
-        VALUES (?, ?, ?, ?, ?)
-        ''', (username, email, password, ip, '1'))
-        account_conn.commit()
-        return redirect('main')
-    else:
-        return render(request, 'register.html')
+
     
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -159,6 +198,12 @@ def get_client_ip(request):
     return ip
 
 def upload_file(request):
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    print(username)
     file = request.FILES['file']
     servername = request.POST['servername']
     filename = None
@@ -178,9 +223,10 @@ def upload_file(request):
            with zipfile.ZipFile(file_path, 'r') as zip_ref:
                cursor = server_conn.cursor()
                cursor.execute('''
-                INSERT INTO servers (file_name, server_name, server_id)
-                VALUES (?, ?, ?)
-            ''', (filename, servername, subdirectory))
+                INSERT INTO servers (file_name, server_name, server_id, owner)
+                VALUES (?, ?, ?, ?)
+            ''', (filename, servername, subdirectory, username))
+               server_conn.commit()
                zip_ref.extractall(server_file_path)
                print(filename)
                return redirect('file_uploaded')

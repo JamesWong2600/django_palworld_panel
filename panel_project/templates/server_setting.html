@@ -5,7 +5,18 @@
 </head>
 {% load static %}
 <link rel="stylesheet" type="text/css" href="{% static 'css/server_settings.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'css/horizontal_bar.css' %}">
 <body>
+    <nav>
+        <ul class="navbar">
+            <li><a href="{% url 'server_control' %}">Server Control</a></li>
+            <li><a href="">Server Config Setting</a></li>
+            <li><a href="">Server Backup</a></li>
+            <li><a href="">Server Monitor</a></li>
+            <li><a href="">File Access</a></li>
+            <li class="logout"><a href="{% url 'logout' %}">Logout</a></li>
+        </ul>
+    </nav>
     <h2>Configuration Settings</h2>
         <table>
             <tr>

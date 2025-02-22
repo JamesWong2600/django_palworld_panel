@@ -1,0 +1,40 @@
+.navbar {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #333;
+    border-bottom: 2px solid #4CAF50;
+    display: flex;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    left: 0;
+    justify-content: space-around;
+}
+
+.navbar li {
+    display: inline;
+    width: 16%;
+}
+
+.navbar li a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 20px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.3s, color 0.3s;
+    border-radius: 4px;
+}
+
+.navbar li a:hover {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.navbar li a.active {
+    background-color: #4CAF50;
+    color: white;
+}

@@ -3,29 +3,57 @@
 <head>
     <title>File Uploaded</title>
     {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/container.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/file_uploaded.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/horizontal_bar.css' %}">
     <script>
         function openEditWindow(fileName) {
             window.open('/edit/' + fileName, 'Edit File', 'width=1200,height=500');
         }
         function openRenameWindow(fileName) {
-            window.open('/rename/' + fileName, 'Rename File', 'width=400,height=200');
+            window.open('/rename_file/' + fileName, 'Rename File', 'width=800,height=400');
         }
     </script>
 </head>
 <body>
+    <nav>
+        <ul class="navbar">
+            <li><a href="{% url 'server_control' %}">Server Control</a></li>
+            <li><a href="">Server Config Setting</a></li>
+            <li><a href="">Server Backup</a></li>
+            <li><a href="">Server Monitor</a></li>
+            <li><a href="">File Access</a></li>
+            <li class="logout"><a href="{% url 'logout' %}">Logout</a></li>
+        </ul>
+    </nav>
     <div class="container">
+
         <h1>File Uploaded Successfully</h1>
         <div class="file-list">
             <h2>Uploaded Files:</h2>
             <ul>
                 {% for file in files %}
                     <li>
-                        {{ file }}
-                        <button onclick="openEditWindow('{{ file }}')">Edit</button>
-                        <a href="{% url 'delete_file' file %}"><button>Delete</button></a>
-                        <a href="{% url 'download_file' file %}"><button>Download</button></a>
-                        <button onclick="openRenameWindow('{{ file }}')">Rename</button>
+                        <span class="file-name">{{ file }}</span>
+                        <form action="{% url 'edit_file' file %}" method="get" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="file" value="{{ file }}">
+                            <button type="submit" class="btn edit-btn">Edit</button>
+                        </form>
+                        <form action="{% url 'delete_file' file %}" method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="file" value="{{ file }}">
+                            <button type="submit" class="btn delete-btn">Delete</button>
+                        </form>
+                        <form action="{% url 'download_file' file %}" method="get" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="file" value="{{ file }}">
+                            <button type="submit" class="btn download-btn">Download</button>
+                        </form>
+                        <form action="{% url 'rename_file_view' file %}" method="get" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="file" value="{{ file }}">
+                            <button type="submit" class="btn rename-btn">Rename</button>
+                        </form>
                     </li>
                 {% endfor %}
             </ul>

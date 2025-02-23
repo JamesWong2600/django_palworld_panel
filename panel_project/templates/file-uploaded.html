@@ -5,6 +5,7 @@
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/file_uploaded.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/horizontal_bar.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/rename_form.css' %}">
     <script>
         function openEditWindow(fileName) {
             window.open('/edit/' + fileName, 'Edit File', 'width=1200,height=500');
@@ -36,7 +37,7 @@
                         {% if status == "a" %}
                         <input type="hidden" value="{{ status }}">
                         <span class="file-name">{{ file }}</span>
-                        <form action="{% url 'edit_file' file %}" method="get" style="display:inline;">
+                        <form action="{% url 'edit_file_view' %}" method="post" style="display:inline;">
                             {% csrf_token %}
                             <input type="hidden" name="file" value="{{ file }}">
                             <button type="submit" class="btn edit-btn">Edit</button>
@@ -59,11 +60,16 @@
                         </form>
                         {% else %}
                         <input type="hidden" value="{{ status }}">
-                        <form action="{% url 'send_rename' %}" method="post">
+                        <form action="{% url 'send_rename' %}" method="post" class="rename-form">
                             {% csrf_token %}
-                            <input class="file-name" type="text" name="new_file_name"  value="{{ file }}"></input>
+                            <div class="form-group">
+                                <label for="new_file_name_{{ forloop.counter }}">New File Name:</label>
+                                <input id="new_file_name_{{ forloop.counter }}" class="file-name-input" type="text" name="new_file_name" value="{{ file }}">
+                            </div>
                             <input type="hidden" name="original_file_name" value="{{ file_rename }}">
-                            <button type="submit" class="btn rename-btn">Save_Rename</button>
+                            <div class="button-group">
+                                <button type="submit" class="btn rename-btn">Save Rename</button>
+                            </div>
                         </form>
                         {% endif %}
                     </li>

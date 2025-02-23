@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rename File</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/edit_file_view.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>Rename File: {{ file_name }}</h1>
+        <form action="{% url 'save_edit' %}" method="post" class="edit-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="content">File Content:</label>
+                <textarea id="content" name="content" class="form-control">{{ content }}</textarea>
+            </div>
+            <input type="hidden" name="file_name" value="{{ file_name }}">
+            <div class="form-actions">
+                <button type="submit" class="btn submit-btn">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

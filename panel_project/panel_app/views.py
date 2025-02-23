@@ -56,15 +56,55 @@ account_conn = sqlite3.connect('account.db', check_same_thread=False)
 
 
 
-def edit_file_view(request, file_name):
-    file_path = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90','server', file_name)
-    if request.method == 'POST':
-        new_content = request.POST['file_content']
-        edit_file(file_path, new_content)
-        return redirect('file_uploaded')
+def edit_file_view(request):
+    file_name = request.POST['file']
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    print(username+ " name")
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    for rowrow in server_cursor.fetchall():
+        server_id = rowrow[0]
+        servername = rowrow[1]
+    file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, file_name)
+    content = read_all_text(file_path)
+    return render(request, 'edit_file_view.html', {'file_name': file_name, 'content': content})
+
+
+def save_edit(request):
+    file_name = request.POST['file_name']
+    content = request.POST['content']
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    print(username+ " name")
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    for rowrow in server_cursor.fetchall():
+        server_id = rowrow[0]
+        servername = rowrow[1]
+    if not file_name.endswith('.txt'):
+        new_file_name = file_name + '.txt'
+        old_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, file_name)
+        new_file_name = os.path.join(settings.MEDIA_ROOT, server_id, servername, new_file_name)
+        os.rename(old_file_path, new_file_name)
+        with open(new_file_name, 'w') as file:
+            file.write(content)
+        with open(new_file_name, 'r') as file:
+            print(file.read())
+        os.rename(new_file_name, old_file_path)    
     else:
-        file_content = edit_file(file_path)
-        return render(request, 'edit_file.html', {'file_name': file_name, 'file_content': file_content})
+        with open(new_file_name, 'w') as file:
+            file.write(content)
+        with open(new_file_name, 'r') as file:
+            print(file.read())
+    return redirect('file_uploaded')
+
     
 def delete_file_view(request):
     file_name = request.POST['file']

@@ -3,7 +3,7 @@ import sqlite3
 from configparser import ConfigParser
 from django.conf import settings
 from django.shortcuts import render, redirect
-
+import shutil
 
 conn = sqlite3.connect('setting_data.db', check_same_thread=False)
 
@@ -17,7 +17,13 @@ def edit_file(file_path, new_content=None):
 
 def delete_file(file_path):
     if os.path.exists(file_path):
-        os.remove(file_path)
+        if os.path.isdir(file_path):
+           shutil.rmtree(file_path)
+        else:   
+           os.remove(file_path)
+        print(f"File {file_path} has been removed.")
+    else:
+        print(f"File {file_path} does not exist.")   
 
 def download_file(file_path):
     pass
@@ -78,7 +84,10 @@ def create_new_file(file_path, content):
 
 def remove_file(file_path):
     if os.path.exists(file_path):
-        os.remove(file_path)
+        if os.path.isdir(file_path):
+           shutil.rmtree(file_path)
+        else:   
+           os.remove(file_path)
         print(f"File {file_path} has been removed.")
     else:
         print(f"File {file_path} does not exist.")        

@@ -31,15 +31,17 @@
         <div class="file-list">
             <h2>Uploaded Files:</h2>
             <ul>
-                {% for file in files %}
+                {% for file, file_rename, status in files %}
                     <li>
+                        {% if status == "a" %}
+                        <input type="hidden" value="{{ status }}">
                         <span class="file-name">{{ file }}</span>
                         <form action="{% url 'edit_file' file %}" method="get" style="display:inline;">
                             {% csrf_token %}
                             <input type="hidden" name="file" value="{{ file }}">
                             <button type="submit" class="btn edit-btn">Edit</button>
                         </form>
-                        <form action="{% url 'delete_file' file %}" method="post" style="display:inline;">
+                        <form action="{% url 'delete_file' %}" method="post" style="display:inline;">
                             {% csrf_token %}
                             <input type="hidden" name="file" value="{{ file }}">
                             <button type="submit" class="btn delete-btn">Delete</button>
@@ -49,11 +51,21 @@
                             <input type="hidden" name="file" value="{{ file }}">
                             <button type="submit" class="btn download-btn">Download</button>
                         </form>
-                        <form action="{% url 'rename_file_view' file %}" method="get" style="display:inline;">
+                        <form action="{% url 'file_uploaded_rename' %}" method="post" style="display:inline;">
                             {% csrf_token %}
                             <input type="hidden" name="file" value="{{ file }}">
+                            <input type="hidden" name="original_file_name" value="{{ file_rename }}">
                             <button type="submit" class="btn rename-btn">Rename</button>
                         </form>
+                        {% else %}
+                        <input type="hidden" value="{{ status }}">
+                        <form action="{% url 'send_rename' %}" method="post">
+                            {% csrf_token %}
+                            <input class="file-name" type="text" name="new_file_name"  value="{{ file }}"></input>
+                            <input type="hidden" name="original_file_name" value="{{ file_rename }}">
+                            <button type="submit" class="btn rename-btn">Save_Rename</button>
+                        </form>
+                        {% endif %}
                     </li>
                 {% endfor %}
             </ul>

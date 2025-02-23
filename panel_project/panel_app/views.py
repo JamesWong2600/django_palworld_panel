@@ -20,6 +20,9 @@ from py_class.users_information.account import account
 from py_class.servers.config_settings.config_settings import *
 from py_class.users_information.register.register import register
 from py_class.users_information.login.login_and_logout import login_account, logout
+import stat
+import shutil
+
 
 account()
 check_server()
@@ -63,8 +66,21 @@ def edit_file_view(request, file_name):
         file_content = edit_file(file_path)
         return render(request, 'edit_file.html', {'file_name': file_name, 'file_content': file_content})
     
-def delete_file_view(request, file_name):
-    file_path = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90','server',file_name)
+def delete_file_view(request):
+    file_name = request.POST['file']
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    print(username+ " name")
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    for rowrow in server_cursor.fetchall():
+        server_id = rowrow[0]
+        servername = rowrow[1]
+    file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, file_name)
+    os.chmod(file_path, stat.S_IWRITE)
     delete_file(file_path)
     return redirect('file_uploaded')
 
@@ -185,8 +201,68 @@ def file_uploaded(request):
     for fold in folders:
         fold = fold.replace(server_file_path+"\\", '')
         folders2.append(fold)
-    return render(request, 'file-uploaded.html', {'files': folders2})
+    files = [(folder, folder, "a") for folder in folders2]   
+    return render(request, 'file-uploaded.html', {'files': files})
 
+
+def file_uploaded_rename(request):
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    print(username+ " name")
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    for rowrow in server_cursor.fetchall():
+        server_id = rowrow[0]
+        servername = rowrow[1]
+    print(server_id)
+    print(servername)
+    server_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername)
+    print(server_file_path)
+    #server_file_path_branch = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90', '8Pd0j4fKCO90')
+    #server_file_path2 = server_file_path.replace(server_file_path_branch, '')
+    print(server_file_path)
+    folders = list_folders(server_file_path)
+    folders2 = []
+    for fold in folders:
+        fold = fold.replace(server_file_path+"\\", '')
+        folders2.append(fold)
+    files = [(folder, folder, "b") for folder in folders2]
+    return render(request, 'file-uploaded.html', {'files': files})
+
+def send_rename(request):
+    ip = get_client_ip(request)
+    new_file_name = request.POST['new_file_name']
+    original_file_name = request.POST['original_file_name']
+    print(original_file_name + " original")
+    print(new_file_name + " new")
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    print(username+ " name")
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    for rowrow in server_cursor.fetchall():
+        server_id = rowrow[0]
+        servername = rowrow[1]
+    server_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername)
+    os.rename(os.path.join(server_file_path, original_file_name), os.path.join(server_file_path, new_file_name))
+    print(server_id)
+    print(servername)
+    print(server_file_path)
+    #server_file_path_branch = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90', '8Pd0j4fKCO90')
+    #server_file_path2 = server_file_path.replace(server_file_path_branch, '')
+    print(server_file_path)
+    folders = list_folders(server_file_path)
+    folders2 = []
+    for fold in folders:
+        fold = fold.replace(server_file_path+"\\", '')
+        folders2.append(fold)
+    files = [(folder, folder, 'a') for folder in folders2]
+    return render(request, 'file-uploaded.html', {'files': files})
 
     
 def get_client_ip(request):

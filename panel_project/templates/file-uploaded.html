@@ -47,7 +47,7 @@
                             <input type="hidden" name="file" value="{{ file }}">
                             <button type="submit" class="btn delete-btn">Delete</button>
                         </form>
-                        <form action="{% url 'download_file' file %}" method="get" style="display:inline;">
+                        <form action="{% url 'download_file' %}" method="post" style="display:inline;">
                             {% csrf_token %}
                             <input type="hidden" name="file" value="{{ file }}">
                             <button type="submit" class="btn download-btn">Download</button>

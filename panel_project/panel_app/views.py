@@ -9,19 +9,29 @@ import random
 import string
 import redis
 import shutil
+import ast
+import sqlite3
+import stat
+import subprocess
+import pygetwindow as gw
+import pyautogui
+from PIL import Image
+import threading
 from py_class.file_option import  edit_file, delete_file, rename_file
 from py_class.start_or_close_server import execute_exe
 from py_class.read_palworld_config.get_config import get_config_data, read_all_text
-import ast
-import sqlite3
 from configparser import ConfigParser
 from py_class.servers.check_server import check_server
 from py_class.users_information.account import account
 from py_class.servers.config_settings.config_settings import *
 from py_class.users_information.register.register import register
 from py_class.users_information.login.login_and_logout import login_account, logout
-import stat
-import shutil
+from py_class.file_access.edit_file import *
+from py_class.file_access.delete_file import *
+from py_class.file_access.download_file import *
+from py_class.file_access.rename_file import *
+import time
+
 
 
 account()
@@ -47,6 +57,15 @@ def authentication(request):
     logout(request)
     login_account(request)
 
+def file_acesss(request, file_name):
+    edit_file_view(request)
+    save_edit(request)
+    delete_file_view(request)
+    download_file_view(request)
+    rename_file_view(request, file_name)
+    send_rename(request)
+    file_uploaded_rename(request)
+
 conn = sqlite3.connect('setting_data.db', check_same_thread=False)
 server_conn = sqlite3.connect('servers.db', check_same_thread=False)
 account_conn = sqlite3.connect('account.db', check_same_thread=False)
@@ -56,128 +75,15 @@ account_conn = sqlite3.connect('account.db', check_same_thread=False)
 
 
 
-def edit_file_view(request):
-    file_name = request.POST['file']
-    ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
-    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
-    for row in update_cursor.fetchall():
-        username = row[0]
-    print(username+ " name")
-    server_cursor = server_conn.cursor()
-    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
-    for rowrow in server_cursor.fetchall():
-        server_id = rowrow[0]
-        servername = rowrow[1]
-    file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, file_name)
-    content = read_all_text(file_path)
-    return render(request, 'edit_file_view.html', {'file_name': file_name, 'content': content})
 
-
-def save_edit(request):
-    file_name = request.POST['file_name']
-    content = request.POST['content']
-    ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
-    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
-    for row in update_cursor.fetchall():
-        username = row[0]
-    print(username+ " name")
-    server_cursor = server_conn.cursor()
-    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
-    for rowrow in server_cursor.fetchall():
-        server_id = rowrow[0]
-        servername = rowrow[1]
-    if not file_name.endswith('.txt'):
-        new_file_name = file_name + '.txt'
-        old_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, file_name)
-        new_file_name = os.path.join(settings.MEDIA_ROOT, server_id, servername, new_file_name)
-        os.rename(old_file_path, new_file_name)
-        with open(new_file_name, 'w') as file:
-            file.write(content)
-        with open(new_file_name, 'r') as file:
-            print(file.read())
-        os.rename(new_file_name, old_file_path)    
-    else:
-        with open(new_file_name, 'w') as file:
-            file.write(content)
-        with open(new_file_name, 'r') as file:
-            print(file.read())
-    return redirect('file_uploaded')
 
     
-def delete_file_view(request):
-    file_name = request.POST['file']
-    ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
-    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
-    for row in update_cursor.fetchall():
-        username = row[0]
-    print(username+ " name")
-    server_cursor = server_conn.cursor()
-    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
-    for rowrow in server_cursor.fetchall():
-        server_id = rowrow[0]
-        servername = rowrow[1]
-    file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, file_name)
-    os.chmod(file_path, stat.S_IWRITE)
-    delete_file(file_path)
-    return redirect('file_uploaded')
-
-def download_file_view(request, file_name):
-    file_name = request.GET['file']
-    print("downloaded " +file_name)
-    ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
-    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
-    for row in update_cursor.fetchall():
-        username = row[0]
-    print(username+ " name")
-    server_cursor = server_conn.cursor()
-    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
-    for rowrow in server_cursor.fetchall():
-        server_id = rowrow[0]
-        servername = rowrow[1]
-    file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, file_name)
-    print(file_name+ " file name")
-    try:
-        if os.path.isdir(file_path):
-            # Create a zip file of the folder
-            zip_file_path = file_path + '.zip'
-            shutil.make_archive(file_path, 'zip', file_path)
-            return FileResponse(open(zip_file_path, 'rb'), as_attachment=True, filename=os.path.basename(zip_file_path))
-        else:
-            return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=os.path.basename(file_path))
-    except FileNotFoundError:
-        raise Http404("File not found")
-    except PermissionError:
-        return HttpResponse("Permission denied", status=403)
-
-
-def rename_file_view(request, file_name):
-    ip = get_client_ip(request)
-    print(file_name)
-    update_cursor = account_conn.cursor()
-    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
-    for row in update_cursor.fetchall():
-        username = row[0]
-    print(username+ " name")
-    server_cursor = server_conn.cursor()
-    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
-    for rowrow in server_cursor.fetchall():
-        server_id = rowrow[0]
-        servername = rowrow[1]
-    file_path = os.path.join(settings.MEDIA_ROOT, server_id , servername)
-    rename_file(file_path, file_name)
-    return render(request, 'rename_file_view.html', {'file_name': servername})
 
 
 
-def rename_file(file_path, new_name):
-    if os.path.exists(file_path):
-        print(file_path)
-        new_path = os.path.join(os.path.dirname(file_path), new_name)
-        os.rename(file_path, new_path)
+
+
+
     
 def list_folders(directory):
     folders = []
@@ -202,17 +108,18 @@ def main_page(request):
     ip = get_client_ip(request)
     user_cursor = account_conn.cursor()
     print(ip)
-    cursor = server_conn.cursor()
+    server_cursor = server_conn.cursor()
     user_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
-    rows = cursor.fetchall()
     for row in user_cursor.fetchall():
         username = row[0]
-    cursor.execute(f"SELECT * FROM servers where owner = '{username}'")
-    print(username)
-    if str(rows) == "[]":
+    server_cursor.execute(f"SELECT * FROM servers where owner = '{username}'")
+    server = "[]"
+    for rows in server_cursor.fetchall():
+        server = rows[0]
+    if server == "[]":
         return render(request, 'main.html',{'username': username})
     else:
-        return HttpResponse('already have a server')
+        return render(request, 'main.html',{'server': server, 'username': username})
 
 
         
@@ -245,64 +152,33 @@ def file_uploaded(request):
     return render(request, 'file-uploaded.html', {'files': files})
 
 
-def file_uploaded_rename(request):
-    ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
-    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
-    for row in update_cursor.fetchall():
-        username = row[0]
-    print(username+ " name")
-    server_cursor = server_conn.cursor()
-    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
-    for rowrow in server_cursor.fetchall():
-        server_id = rowrow[0]
-        servername = rowrow[1]
-    print(server_id)
-    print(servername)
-    server_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername)
-    print(server_file_path)
-    #server_file_path_branch = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90', '8Pd0j4fKCO90')
-    #server_file_path2 = server_file_path.replace(server_file_path_branch, '')
-    print(server_file_path)
-    folders = list_folders(server_file_path)
-    folders2 = []
-    for fold in folders:
-        fold = fold.replace(server_file_path+"\\", '')
-        folders2.append(fold)
-    files = [(folder, folder, "b") for folder in folders2]
-    return render(request, 'file-uploaded.html', {'files': files})
 
-def send_rename(request):
-    ip = get_client_ip(request)
-    new_file_name = request.POST['new_file_name']
-    original_file_name = request.POST['original_file_name']
-    print(original_file_name + " original")
-    print(new_file_name + " new")
-    update_cursor = account_conn.cursor()
-    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
-    for row in update_cursor.fetchall():
-        username = row[0]
-    print(username+ " name")
-    server_cursor = server_conn.cursor()
-    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
-    for rowrow in server_cursor.fetchall():
-        server_id = rowrow[0]
-        servername = rowrow[1]
-    server_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername)
-    os.rename(os.path.join(server_file_path, original_file_name), os.path.join(server_file_path, new_file_name))
-    print(server_id)
-    print(servername)
-    print(server_file_path)
-    #server_file_path_branch = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90', '8Pd0j4fKCO90')
-    #server_file_path2 = server_file_path.replace(server_file_path_branch, '')
-    print(server_file_path)
-    folders = list_folders(server_file_path)
-    folders2 = []
-    for fold in folders:
-        fold = fold.replace(server_file_path+"\\", '')
-        folders2.append(fold)
-    files = [(folder, folder, 'a') for folder in folders2]
-    return render(request, 'file-uploaded.html', {'files': files})
+def capture_cmd_window(window_name):
+    # Get the window by its title
+    window = gw.getWindowsWithTitle(window_name)
+    if not window:
+        print(f"No window found with the title: {window_name}")
+        return None
+
+    window = window[0]
+
+    print(f"Window found: {window}")
+    # Activate the window
+    window.activate()
+
+    # Get the window's bounding box
+    left, top, right, bottom = window.left, window.top, window.right, window.bottom
+
+    # Capture the screen area of the window
+    screenshot = pyautogui.screenshot(region=(left, top, right - left, bottom - top))
+
+    # Save the screenshot
+    screenshot.save('cmd_window_capture.png')
+    print("Screenshot saved as cmd_window_capture.png")
+
+    return screenshot
+
+
 
     
 def get_client_ip(request):
@@ -362,7 +238,85 @@ def start_or_close_server(request):
 def server_control(request):
     return render(request, 'start_or_close_server.html')
 
-def execute_exe_view(request, file_name):
-    exe_path = os.path.join(settings.MEDIA_ROOT,'8Pd0j4fKCO90', 'server', 'PalServer.exe')
-    stdout, stderr = execute_exe(exe_path)
-    return render(request, 'execute_exe.html', {'file_name': file_name, 'stdout': stdout, 'stderr': stderr})
+def execute_exe(request):
+    thread = threading.Thread(subprocess_run(request))
+    #thread2 = threading.Thread(get_windows(request))
+    thread.start()
+    #thread2.start()
+    thread.join()
+    image_path = os.path.join('C:\web-project\django_palworld_panel\panel_project', 'cmd_window_capture.png')
+    #thread2.join()
+    print(str(image_path))
+    return render(request, 'start_or_close_server.html', {'open': "server is opened"})
+
+def subprocess_run(request):
+    exe_path = get_exe(request)
+    cmd = f'start cmd /k "{exe_path}"'
+    exe_name = os.path.basename(exe_path)
+    subprocess.run(cmd, shell=True, check=False, capture_output=False, text=False)
+    #subprocess.run([exe_path], shell=True, check=False, capture_output=False, text=False)
+    time.sleep(1.5)
+    windows = gw.getWindowsWithTitle(exe_name)
+    print(str(windows) + "windows")
+    if not windows:
+        print(f"No window found with the title: {exe_path}")
+        return None
+    window = windows[0]
+    print(str(window))
+    left, top, right, bottom = window.left, window.top, window.right, window.bottom
+    width = right - left
+    height = bottom - top
+    capture_width = int(width * 0.95)  # Capture 80% of the width
+    capture_height = int(height * 0.8)  # Capture 80% of the height
+    capture_left = left + int(width * 0.02)  # Start 10% from the left
+    capture_top = top + int(height * 0.1) 
+    screenshot = pyautogui.screenshot(region=(capture_left, capture_top, capture_width, capture_height))
+    screenshot.save(os.path.join(settings.MEDIA_ROOT,'cmd_window_capture.png'))
+    print("Screenshot saved as cmd_window_capture.png")
+
+
+
+'''def get_windows(request):  
+    exe_path_core = get_exe(request)  
+    print(exe_path_core+" hp")
+    windows = gw.getWindowsWithTitle(exe_path_core)
+    print(windows)
+    if not windows:
+        print(f"No window found with the title: {exe_path_core}")
+        return None
+    window = windows[0]
+    print(str(window))
+    left, top, right, bottom = window.left, window.top, window.right, window.bottom
+    screenshot = pyautogui.screenshot(region=(left, top, right - left, bottom - top))
+    screenshot.save('cmd_window_capture.png')
+    print("Screenshot saved as cmd_window_capture.png")'''
+
+
+def get_exe(request):
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    for rowrow in server_cursor.fetchall():
+        server_id = rowrow[0]
+        servername = rowrow[1]
+    exe_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, 'PalServer.exe')
+    return exe_path
+
+def get_exe_core(request):
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    for rowrow in server_cursor.fetchall():
+        server_id = rowrow[0]
+        servername = rowrow[1]
+    exe_path_core = os.path.join(settings.MEDIA_ROOT, server_id, servername, 'Pal\Binaries\Win64\PalServer-Win64-Shipping-Cmd.exe')
+    print(exe_path_core)
+    return exe_path_core

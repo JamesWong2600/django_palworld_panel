@@ -7,17 +7,24 @@
 <link rel="stylesheet" type="text/css" href="{% static 'css/upload_page.css' %}">
 <link rel="stylesheet" type="text/css" href="{% static 'css/horizontal_bar.css' %}">
 <body>
-    <nav>
-        <ul class="navbar">
-            <li><a href="{% url 'server_control' %}">Server Control</a></li>
-            <li><a href="">Server Config Setting</a></li>
-            <li><a href="">Server Backup</a></li>
-            <li><a href="">Server Monitor</a></li>
-            <li><a href="">File Access</a></li>
-            <li class="logout"><a href="{% url 'logout' %}">Logout</a></li>
-        </ul>
-    </nav>
+    <script>
+        function updateFileName() {
+            var fileInput = document.getElementById('file-upload');
+            var fileName = fileInput.files[0].name;
+            var fileNameDisplay = document.getElementById('file-name-display');
+            fileNameDisplay.textContent = fileName;
+        }
+    </script>
     <div class="upload-container">
+        {% if server %}
+        <form action="{% url 'file_uploaded' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="servername">servername : {{ server }}</label>
+            </div>
+            <button type="submit">Get-in</button>
+        </form>
+        {% else %}
         <h2>Upload File</h2>
         <form action="{% url 'upload_file' %}" method="post" enctype="multipart/form-data">
             {% csrf_token %}
@@ -27,11 +34,13 @@
                 <label for="file-upload" class="custom-file-upload">
                     Choose File
                 </label>
-                <input type="file" id="file-upload" name="file" required>
+                <input type="file" id="file-upload" name="file" required onchange="updateFileName()">
+                <span id="file-name-display"></span>
             </div>
             <button type="submit">Submit</button>
         </form>
     </div>
     {{ username }}
+    {% endif %}
 </body>
 </html>

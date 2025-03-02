@@ -7,6 +7,7 @@
 <link rel="stylesheet" type="text/css" href="{% static 'css/upload_page.css' %}">
 <link rel="stylesheet" type="text/css" href="{% static 'css/horizontal_bar.css' %}">
 <body>
+<div class="container">
     <script>
         function updateFileName() {
             var fileInput = document.getElementById('file-upload');
@@ -16,31 +17,34 @@
         }
     </script>
     <div class="upload-container">
-        {% if server %}
-        <form action="{% url 'file_uploaded' %}" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="servername">servername : {{ server }}</label>
-            </div>
-            <button type="submit">Get-in</button>
-        </form>
-        {% else %}
-        <h2>Upload File</h2>
-        <form action="{% url 'upload_file' %}" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="servername">servername</label>
-                <input type="text" id="servername" name="servername" required>
-                <label for="file-upload" class="custom-file-upload">
-                    Choose File
-                </label>
-                <input type="file" id="file-upload" name="file" required onchange="updateFileName()">
-                <span id="file-name-display"></span>
-            </div>
-            <button type="submit">Submit</button>
-        </form>
+       <div class="welcome-message">
+        Welcome, {{ username }}!
     </div>
-    {{ username }}
+    {% if server %}
+    <form action="{% url 'file_uploaded' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="servername">Servername: {{ server }}</label>
+        </div>
+        <button type="submit">Get-in</button>
+    </form>
+    {% else %}
+    <h2>Upload File</h2>
+    <form action="{% url 'upload_file' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="servername">Servername</label>
+            <input type="text" id="servername" name="servername" required>
+            <label for="file-upload" class="custom-file-upload">
+                Choose File
+            </label>
+            <input type="file" id="file-upload" name="file" required onchange="updateFileName()">
+            <span id="file-name-display" class="file-name-display">No file chosen</span>
+        </div>
+        <button type="submit">Submit</button>
+    </form>
     {% endif %}
+</div>
+</div>
 </body>
 </html>

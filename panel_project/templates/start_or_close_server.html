@@ -3,24 +3,115 @@
 <head>
     <title>Edit File</title>
     {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/container.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/server_start_and_close.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/horizontal_bar.css' %}">
+    <style>
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
 <script>
-    setInterval(function() {
-    $('#open').load('#open')},2000)
-    </script>
+        function updateProgressBar() {
+            fetch("{% url 'get_usage' %}")
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data.opened)
+                    if (data.opened === "server is opened") {
+                    document.getElementById('opened').innerText = data.opened;
+                    document.getElementById('start_or_close').innerText = data.start_or_close;
+                    document.getElementById('cpu-usage').value = data.cpu_usage;
+                    document.getElementById('cpu-usage-text').innerText = data.cpu_usage + ' %';
+                    document.getElementById('ram-usage').value = data.ram_usage;
+                    document.getElementById('ram-usage-text').innerText = data.ram_usage + ' MB';
+                    document.getElementById('cpu-usage').classList.remove('hidden');
+                    document.getElementById('ram-usage').classList.remove('hidden');
+                    document.getElementById('cpu-progress-label').classList.remove('hidden');
+                    document.getElementById('ram-progress-label').classList.remove('hidden');
+                    //document.getElementById('closed').innerText = data.opened;
+                    }
+                    else if (data.opened === "server is closed") {
+                    document.getElementById('opened').innerText = data.opened;
+                    document.getElementById('start_or_close').innerText = data.start_or_close;
+                    document.getElementById('cpu-usage-text').innerText = "";
+                    document.getElementById('ram-usage-text').innerText = "";
+                    document.getElementById('cpu-usage').classList.add('hidden');
+                    document.getElementById('ram-usage').classList.add('hidden');
+                    document.getElementById('cpu-progress-label').classList.add('hidden');
+                    document.getElementById('ram-progress-label').classList.add('hidden');
+                    //document.getElementById('closed').innerText = data.opened;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('opened').innerText = data.opened;
+                    document.getElementById('start_or_close').innerText = data.start_or_close;
+                    document.getElementById('cpu-usage-text').innerText = "";
+                    document.getElementById('ram-usage-text').innerText = "";
+                    document.getElementById('cpu-usage').classList.add('hidden');
+                    document.getElementById('ram-usage').classList.add('hidden');
+                    document.getElementById('cpu-progress-label').classList.add('hidden');
+                    document.getElementById('ram-progress-label').classList.add('hidden');
+                }
+                )}
+
+        // Call the function every 2 seconds
+        setInterval(updateProgressBar, 1000);
+        //function callDjangoFunction() {
+         //   fetch('/execute_exe/')  // Updated URL
+         //       .then(response => {
+         //           if (!response.ok) {
+          //              throw new Error('Network response was not ok');
+          //          }
+          //          return response.json();
+           //     })
+           //     .then(data => {
+           //         // Update the DOM with the response data
+           //         document.getElementById('response').innerText = data.message + ' at ' + data.timestamp;
+           //     })
+          //      .catch(erro=r > console.error('Error:', error));
+       // }
+
+        // Call the function every 2 seconds
+        // setInterval(callDjangoFunction, 2000);
+</script>
 <body>
-     <form action="{% url 'execute_exe' %}" method="post">
-        {% csrf_token %}
-        <button type="submit">Start or Close Server</button>
-     </form>
-     {% if open %}
-     <div id="open">
-        <img src="C:\web-project\django_palworld_panel\panel_project\cmd_window_capture.png" alt="opien">
-        <p>{{open}}</p>
-     </div>      
-     {% else %}
-        <p>Server is closed</p>
-     {% endif %}
+   <nav>
+      <ul class="navbar">
+          <li><a href="{% url 'server_control' %}">Server Control</a></li>
+          <li><a href="">Server Config Setting</a></li>
+          <li><a href="">Server Backup</a></li>
+          <li><a href="">Server Monitor</a></li>
+          <li><a href="{% url 'file_uploaded' %}">File Access</a></li>
+          <li class="logout"><a href="{% url 'logout' %}">Logout</a></li>
+      </ul>
+  </nav>
+  <div class="container">
+    <div id="response">
+        <div id="open">
+            <form action="{% url 'execute_exe' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" id="start_or_close">{{start_or_close}}</button>
+            </form>
+            <p id="opened">{{ opened }}</p>
+
+        {% if opened == "server is opened" %}
+            {% if not cpu_usage == "null" and not ram_usage == "null" %}
+            <div class="progress-container">
+                <div id="cpu-progress-label" class="progress-label" class="hidden">CPU Usage:</div>
+                <progress id="cpu-usage" value="{{ cpu_usage }}" max="100" class="hidden"></progress>
+                <p id="cpu-usage-text">CPU: {{ cpu_usage }}%</p>
+                <div id="ram-progress-label" class="progress-label" class="hidden">RAM Usage:</div>
+                <progress id="ram-usage" value="{{ ram_usage }}" max="{{ total_ram }}" class="hidden"></progress>
+                <p id="ram-usage-text">RAM: {{ ram_usage }} MB</p>
+            </div>
+            
+            {% elif cpu_usage == "null" and ram_usage == "null" %}
+            <p>CPU and RAM usage data is not available.</p>
+            {% endif %}
+        {% endif %}
+        </div>
+    </div>
+</div>
 </body>
 </html>

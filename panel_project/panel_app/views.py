@@ -31,8 +31,21 @@ from py_class.file_access.delete_file import *
 from py_class.file_access.download_file import *
 from py_class.file_access.rename_file import *
 import time
-
-
+import sys
+import select
+import pytesseract
+from pywinauto import findwindows, Desktop
+import uiautomation as auto
+import keyboard
+import pyperclip
+from pywinauto import Application
+from pywinauto import *
+from PIL import ImageGrab
+import pywinauto
+from pywinauto.findwindows import find_windows
+from queue import Queue, Empty
+import psutil
+from django.http import JsonResponse
 
 account()
 check_server()
@@ -236,27 +249,209 @@ def start_or_close_server(request):
     return HttpResponse('sucessfully started or closed the server')
 
 def server_control(request):
-    return render(request, 'start_or_close_server.html')
+    return render(request, 'start_or_close_server.html',{'start_or_close': 'start', 'opened': 'server is closed'})
 
 def execute_exe(request):
-    thread = threading.Thread(subprocess_run(request))
-    #thread2 = threading.Thread(get_windows(request))
-    thread.start()
+    windows = gw.getWindowsWithTitle(window_title)
+    #windows = find_windows(title_re=".*PalServer.*")
+    if not windows:
+       cpu_usage = get_process_cpu_usage("PalServer-Win64-Shipping-Cmd.exe")
+       if cpu_usage is None:
+         cpu_usage = 0
+       ram_usage = get_process_ram_usage("PalServer-Win64-Shipping-Cmd.exe")
+       if ram_usage is None:
+         ram_usage = 0    
+       total_ram = get_total_ram_size()
+       print("cpu= "+ str(cpu_usage))
+       thread = threading.Thread(target=open_server)
+       thread.start()
+       thread.join()
+       window_text = get_window_text()
+       if window_text:
+           print(f"Window text: {window_text}")
+       return render(request, 'start_or_close_server.html', {'start_or_close': 'close', 'opened': "server is opened", 'cpu_usage': str(cpu_usage), 'ram_usage': str(ram_usage), 'total_ram': str(total_ram)})
+    if windows:
+       thread = threading.Thread(target=close_server)
+       thread.start()
+       thread.join()
+       return render(request, 'start_or_close_server.html', {'start_or_close': 'start', 'opened': 'server is closed'})
+    #thread = threading.Thread(subprocess_run(request))
+    #=thread2 = threading.Thread(get_windows(request))
+    #thread.start()
     #thread2.start()
-    thread.join()
-    image_path = os.path.join('C:\web-project\django_palworld_panel\panel_project', 'cmd_window_capture.png')
-    #thread2.join()
-    print(str(image_path))
-    return render(request, 'start_or_close_server.html', {'open': "server is opened"})
+    #image_path = os.path.join('C:\web-project\django_palworld_panel\panel_project', 'cmd_window_capture.png')
+    #thread.join()
+    #print(str(image_path))
+    #return render(request, 'start_or_close_server.html', {'open': "server is opened"})
+def get_usage(request):
+    cpu_usage = get_process_cpu_usage("PalServer-Win64-Shipping-Cmd.exe")
+    if cpu_usage is None:
+        cpu_usage = 0
+    ram_usage = get_process_ram_usage("PalServer-Win64-Shipping-Cmd.exe")
+    if ram_usage is None:
+        ram_usage = 0    
+    total_ram = get_total_ram_size()
+    print(str(ram_usage))
+    windows = gw.getWindowsWithTitle(window_title)
+    if not windows:
+        print("server is closed")
+        return JsonResponse({'start_or_close': 'start', 'opened': "server is closed"})
+    if windows:
+        return JsonResponse({'start_or_close': 'close', 'opened': "server is opened", 'cpu_usage': str(cpu_usage), 'ram_usage': str(ram_usage), 'total_ram': str(total_ram)})
+    
+
+
+def get_window_text():
+    try:
+        windows = find_windows(title_re=".*PalServer.*")
+        if windows:
+            app = Application(backend="win32").connect(handle=windows[0])
+            window = app.window(handle=windows[0])
+            return window.window_text()
+    except Exception as e:
+        print(f"Error: {e}")
+    return None
+
+def get_process_ram_usage(process_name):
+    for proc in psutil.process_iter(['pid', 'name']):
+        if proc.info['name'] == process_name:
+            process = psutil.Process(proc.info['pid'])
+            return round(process.memory_info().rss / (1024 * 1024), 2) 
+    return None
+
+
+def get_process_cpu_usage(process_name):
+    for proc in psutil.process_iter(['pid', 'name']):
+        if proc.info['name'] == process_name:
+            process = psutil.Process(proc.info['pid'])
+            return process.cpu_percent(interval=1)
+    return None
+
+
+def get_total_ram_size():
+    mem = psutil.virtual_memory()
+    return round(mem.total / (1024 * 1024), 2) 
+
+
+def open_server():
+    process = subprocess.Popen(
+    [r"C:\\project\\django_palworld_panel\\panel_project\\uploads\\yOCn2OfYILkQ\\kfc\\PalServer.exe"],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    text=True
+    )
+    q_stdout = Queue()
+    q_stderr = Queue()
+    threading.Thread(target=enqueue_output, args=(process.stdout, q_stdout)).start()
+    threading.Thread(target=enqueue_output, args=(process.stderr, q_stderr)).start()
+    while True:
+        try:
+            line = q_stdout.get_nowait()
+        except Empty:
+            break
+        else:
+            print(line.strip())
+
+        try:
+            line = q_stderr.get_nowait()
+        except Empty:
+            break
+        else:
+            print(line.strip())
+
+
+def enqueue_output(pipe, queue):
+    for line in iter(pipe.readline, ''):
+        queue.put(line)
+    pipe.close()
+
+
+def read_output(pipe):
+    for line in iter(pipe.readline, ''):
+        print(line.strip())
+    pipe.close()
+    #Application(backend="win32").start(r"C:\\project\\django_palworld_panel\\panel_project\\uploads\\yOCn2OfYILkQ\\kfc\\PalServer.exe")
+    #return render(request, 'start_or_close_server.html', {'open': "server is opened"})
+
+def close_server():
+    os.system(r"taskkill /im PalServer-Win64-Shipping-Cmd.exe /f")
+    #return render(request, 'start_or_close_server.html')
+    #os.system(r"taskkill /im C:\project\django_palworld_panel\panel_project\uploads\yOCn2OfYILkQ\kfc\Pal\Binaries\Win64\PalServer-Win64-Shipping-Cmd.exe")  
+    #app = Application().connect(window_title=r"C:\\project\\django_palworld_panel\\panel_project\\uploads\\yOCn2OfYILkQ\\kfc\\PalServer.exe")
+    #app.kill()    
+
+
+def read_output(pipe):
+    for line in iter(pipe.readline, b''):
+        print(line.decode().strip())
+    pipe.close()
+
+window_title = r"C:\project\django_palworld_panel\panel_project\uploads\yOCn2OfYILkQ\kfc\Pal\Binaries\Win64\PalServer-Win64-Shipping-Cmd.exe"
+
 
 def subprocess_run(request):
-    exe_path = get_exe(request)
-    cmd = f'start cmd /k "{exe_path}"'
-    exe_name = os.path.basename(exe_path)
-    subprocess.run(cmd, shell=True, check=False, capture_output=False, text=False)
+    windows = gw.getWindowsWithTitle(window_title)
+    if not windows:
+       Application(backend="win32").start(r"C:\\project\\django_palworld_panel\\panel_project\\uploads\\yOCn2OfYILkQ\\kfc\\PalServer.exe")
+    if windows:
+       app = Application().connect(r"C:\\project\\django_palworld_panel\\panel_project\\uploads\\yOCn2OfYILkQ\\kfc\\PalServer.exe")
+       os.system(rf"taskkill /f /im C:\\project\\django_palworld_panel\\panel_project\\uploads\\yOCn2OfYILkQ\\kfc\\PalServer.exe")  
+
+
+    #exe_path = get_exe(request)
+    #exe_path = rf"{exe_path.replace("\\","\\")}"
+    #exe_path = get_exe(request).replace("\\","/")
+    #print(exe_path)
+    #exe_name = os.path.basename(exe_path)
+    #process = subpr*-ocess.Popen(exe_path , stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=False)
+
+    # 等待應用程式啟動
+
+    '''windows = [w.window_text() for w in Desktop(backend="uia").windows() if w.window_text()]
+    print("目前開啟的視窗標題：")
+    for title in windows:
+        print(title)'''
+    '''title=r"C:/project/django_palworld_panel/panel_project/uploads/yOCn2OfYILkQ/kfc/Pal/Binaries/Win64/PalServer-Win64-Shipping-Cmd.exe"'''
+    #window = app.window(title=r"C:/project/django_palworld_panel/panel_project/uploads/yOCn2OfYILkQ/kfc/Pal/Binaries/Win64/PalServer-Win64-Shipping-Cmd.exe")  
+
+    #try:
+        #window = gw.getWindowsWithTitle(r"C:\project\django_palworld_panel\panel_project\uploads\yOCn2OfYILkQ\kfc\Pal\Binaries\Win64\PalServer-Win64-Shipping-Cmd.exe")[0]
+        #time.sleep(1)
+        #left, top, width, height = window.left, window.top, window.width, window.height
+        #left, top, right, bottom = window.rectangle()
+        
+        #screenshot = ImageGrab.grab(bbox=(left, top, right, bottom))
+        #screenshot = pyautogui.screenshot(region=(left, top, width, height))
+        #screenshot.save("windows.png")
+        ## print(f"Captured image from 'windows.png' and saved as 'windows.png'")
+    #except IndexError:
+      #  print(f"No window found with title: {window_title}")
+    '''time.sleep(2)
+    windows = gw.getWindowsWithTitle(exe_name)
+    window = windows[0]
+    window.activate()
+    print("MYTEXT")
+    time.sleep(1)
+    pyautogui.hotkey('ctrl', 'a')
+    time.sleep(0.5)
+    pyautogui.hotkey('ctrl', 'c')
+    time.sleep(0.5)
+    import pyperclip
+    text = pyperclip.paste()
+    print("MYTEXT"+text)
+    #print(exe_name)
     #subprocess.run([exe_path], shell=True, check=False, capture_output=False, text=False)
     time.sleep(1.5)
-    windows = gw.getWindowsWithTitle(exe_name)
+    #windows = gw.getWindowsWithTitle(exe_name)
+    windows = gw.getWindowsWithTitle(exe_name)[0]
+    windows.activate()
+    time.sleep(1)
+    pyautogui.hotkey('ctrl', 'a')
+    pyautogui.hotkey('ctrl', 'c')
+    time.sleep(0.5)
+    import pyperclip
+    text = pyperclip.paste()
+    print(text)
     print(str(windows) + "windows")
     if not windows:
         print(f"No window found with the title: {exe_path}")
@@ -272,7 +467,7 @@ def subprocess_run(request):
     capture_top = top + int(height * 0.1) 
     screenshot = pyautogui.screenshot(region=(capture_left, capture_top, capture_width, capture_height))
     screenshot.save(os.path.join(settings.MEDIA_ROOT,'cmd_window_capture.png'))
-    print("Screenshot saved as cmd_window_capture.png")
+    print("Screenshot saved as cmd_window_capture.png")'''
 
 
 
@@ -304,6 +499,7 @@ def get_exe(request):
         server_id = rowrow[0]
         servername = rowrow[1]
     exe_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, 'PalServer.exe')
+    print("my_path is "+ exe_path)
     return exe_path
 
 def get_exe_core(request):

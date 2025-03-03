@@ -30,6 +30,7 @@ from py_class.file_access.edit_file import *
 from py_class.file_access.delete_file import *
 from py_class.file_access.download_file import *
 from py_class.file_access.rename_file import *
+from py_class.server_control.server_control import *
 import time
 import sys
 import select
@@ -78,6 +79,20 @@ def file_acesss(request, file_name):
     rename_file_view(request, file_name)
     send_rename(request)
     file_uploaded_rename(request)
+
+def server_controller(request, process_name):
+    get_client_ip(request)
+    get_exe(request)
+    server_control(request)
+    execute_exe(request)
+    get_usage(request)
+    get_process_ram_usage(process_name)
+    get_process_cpu_usage(process_name)
+    get_total_ram_size()
+    open_server()
+    close_server()
+    get_exe_core(request)
+      
 
 conn = sqlite3.connect('setting_data.db', check_same_thread=False)
 server_conn = sqlite3.connect('servers.db', check_same_thread=False)
@@ -248,57 +263,7 @@ def start_or_close_server(request):
     execute_exe(exe_path)
     return HttpResponse('sucessfully started or closed the server')
 
-def server_control(request):
-    return render(request, 'start_or_close_server.html',{'start_or_close': 'start', 'opened': 'server is closed'})
 
-def execute_exe(request):
-    windows = gw.getWindowsWithTitle(window_title)
-    #windows = find_windows(title_re=".*PalServer.*")
-    if not windows:
-       cpu_usage = get_process_cpu_usage("PalServer-Win64-Shipping-Cmd.exe")
-       if cpu_usage is None:
-         cpu_usage = 0
-       ram_usage = get_process_ram_usage("PalServer-Win64-Shipping-Cmd.exe")
-       if ram_usage is None:
-         ram_usage = 0    
-       total_ram = get_total_ram_size()
-       print("cpu= "+ str(cpu_usage))
-       thread = threading.Thread(target=open_server)
-       thread.start()
-       thread.join()
-       window_text = get_window_text()
-       if window_text:
-           print(f"Window text: {window_text}")
-       return render(request, 'start_or_close_server.html', {'start_or_close': 'close', 'opened': "server is opened", 'cpu_usage': str(cpu_usage), 'ram_usage': str(ram_usage), 'total_ram': str(total_ram)})
-    if windows:
-       thread = threading.Thread(target=close_server)
-       thread.start()
-       thread.join()
-       return render(request, 'start_or_close_server.html', {'start_or_close': 'start', 'opened': 'server is closed'})
-    #thread = threading.Thread(subprocess_run(request))
-    #=thread2 = threading.Thread(get_windows(request))
-    #thread.start()
-    #thread2.start()
-    #image_path = os.path.join('C:\web-project\django_palworld_panel\panel_project', 'cmd_window_capture.png')
-    #thread.join()
-    #print(str(image_path))
-    #return render(request, 'start_or_close_server.html', {'open': "server is opened"})
-def get_usage(request):
-    cpu_usage = get_process_cpu_usage("PalServer-Win64-Shipping-Cmd.exe")
-    if cpu_usage is None:
-        cpu_usage = 0
-    ram_usage = get_process_ram_usage("PalServer-Win64-Shipping-Cmd.exe")
-    if ram_usage is None:
-        ram_usage = 0    
-    total_ram = get_total_ram_size()
-    print(str(ram_usage))
-    windows = gw.getWindowsWithTitle(window_title)
-    if not windows:
-        print("server is closed")
-        return JsonResponse({'start_or_close': 'start', 'opened': "server is closed"})
-    if windows:
-        return JsonResponse({'start_or_close': 'close', 'opened': "server is opened", 'cpu_usage': str(cpu_usage), 'ram_usage': str(ram_usage), 'total_ram': str(total_ram)})
-    
 
 
 def get_window_text():
@@ -312,52 +277,9 @@ def get_window_text():
         print(f"Error: {e}")
     return None
 
-def get_process_ram_usage(process_name):
-    for proc in psutil.process_iter(['pid', 'name']):
-        if proc.info['name'] == process_name:
-            process = psutil.Process(proc.info['pid'])
-            return round(process.memory_info().rss / (1024 * 1024), 2) 
-    return None
 
 
-def get_process_cpu_usage(process_name):
-    for proc in psutil.process_iter(['pid', 'name']):
-        if proc.info['name'] == process_name:
-            process = psutil.Process(proc.info['pid'])
-            return process.cpu_percent(interval=1)
-    return None
 
-
-def get_total_ram_size():
-    mem = psutil.virtual_memory()
-    return round(mem.total / (1024 * 1024), 2) 
-
-
-def open_server():
-    process = subprocess.Popen(
-    [r"C:\\project\\django_palworld_panel\\panel_project\\uploads\\yOCn2OfYILkQ\\kfc\\PalServer.exe"],
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    text=True
-    )
-    q_stdout = Queue()
-    q_stderr = Queue()
-    threading.Thread(target=enqueue_output, args=(process.stdout, q_stdout)).start()
-    threading.Thread(target=enqueue_output, args=(process.stderr, q_stderr)).start()
-    while True:
-        try:
-            line = q_stdout.get_nowait()
-        except Empty:
-            break
-        else:
-            print(line.strip())
-
-        try:
-            line = q_stderr.get_nowait()
-        except Empty:
-            break
-        else:
-            print(line.strip())
 
 
 def enqueue_output(pipe, queue):
@@ -373,12 +295,7 @@ def read_output(pipe):
     #Application(backend="win32").start(r"C:\\project\\django_palworld_panel\\panel_project\\uploads\\yOCn2OfYILkQ\\kfc\\PalServer.exe")
     #return render(request, 'start_or_close_server.html', {'open': "server is opened"})
 
-def close_server():
-    os.system(r"taskkill /im PalServer-Win64-Shipping-Cmd.exe /f")
-    #return render(request, 'start_or_close_server.html')
-    #os.system(r"taskkill /im C:\project\django_palworld_panel\panel_project\uploads\yOCn2OfYILkQ\kfc\Pal\Binaries\Win64\PalServer-Win64-Shipping-Cmd.exe")  
-    #app = Application().connect(window_title=r"C:\\project\\django_palworld_panel\\panel_project\\uploads\\yOCn2OfYILkQ\\kfc\\PalServer.exe")
-    #app.kill()    
+
 
 
 def read_output(pipe):
@@ -487,32 +404,11 @@ def subprocess_run(request):
     print("Screenshot saved as cmd_window_capture.png")'''
 
 
-def get_exe(request):
-    ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
-    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
-    for row in update_cursor.fetchall():
-        username = row[0]
-    server_cursor = server_conn.cursor()
-    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
-    for rowrow in server_cursor.fetchall():
-        server_id = rowrow[0]
-        servername = rowrow[1]
-    exe_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, 'PalServer.exe')
-    print("my_path is "+ exe_path)
-    return exe_path
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
 
-def get_exe_core(request):
-    ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
-    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
-    for row in update_cursor.fetchall():
-        username = row[0]
-    server_cursor = server_conn.cursor()
-    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
-    for rowrow in server_cursor.fetchall():
-        server_id = rowrow[0]
-        servername = rowrow[1]
-    exe_path_core = os.path.join(settings.MEDIA_ROOT, server_id, servername, 'Pal\Binaries\Win64\PalServer-Win64-Shipping-Cmd.exe')
-    print(exe_path_core)
-    return exe_path_core

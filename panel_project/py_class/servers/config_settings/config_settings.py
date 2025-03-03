@@ -4,8 +4,20 @@ from configparser import ConfigParser
 from django.conf import settings
 from django.shortcuts import render, redirect
 import shutil
-
+import json
+from django.http import JsonResponse
+import time
 conn = sqlite3.connect('setting_data.db', check_same_thread=False)
+server_conn = sqlite3.connect('servers.db', check_same_thread=False)
+account_conn = sqlite3.connect('account.db', check_same_thread=False)
+
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
 
 def edit_file(file_path, new_content=None):
     if new_content is not None:
@@ -35,13 +47,27 @@ def rename_file(file_path, new_name):
 
 
 def change_server_settings(request):
-    name = request.POST.get('name')
-    value = request.POST.get('value')
-    print(name)
-    print(value)
-    cursor = conn.cursor()
-    cursor.execute('''UPDATE users SET value = ? WHERE name = ?''', (value, name))
-    conn.commit()
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    print(username+ " bname")
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    print("tov")   
+    for rowrow in server_cursor.fetchall():
+        server_id = rowrow[0]
+        servername = rowrow[1]
+    print("tov")    
+    names = json.loads(request.POST.get('names', '[]'))
+    values = json.loads(request.POST.get('values', '[]'))
+    set = zip(names, values)
+    for name, value in set:    
+        print(name+" "+value)
+        cursor = conn.cursor()
+        cursor.execute('''UPDATE users SET value = ? WHERE name = ?''', (value, name))
+        conn.commit()  
     cursor = conn.cursor()
     cursor2 = conn.cursor()
     cursor3 = conn.cursor()
@@ -61,21 +87,25 @@ def change_server_settings(request):
         value = str(value).replace("('", "")
         value = value.replace("',)", "")
         values_list.append(value)
+        print("new value ="+ value)
     combined_list = zip(names_list, values_list)
     all = str(all).replace("', '","=")
     all = all.replace("('", "")
     all = all.replace("')", "")
     all = all.replace("[", "OptionSettings=(")
     all = all.replace("]", ")")
-    new_file_path = os.path.join(settings.MEDIA_ROOT, 'changed_palworld_setting', 'PalWorldSettings.txt')
+    new_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer','PalWorldSettings.txt')
+    delete_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer','PalWorldSettings.ini')
+    if os.path.exists(delete_file_path):
+       os.remove(delete_file_path) 
     create_new_file(new_file_path, '')
-    write_string_to_second_line(os.path.join(settings.MEDIA_ROOT,'changed_palworld_setting', 'PalWorldSettings.txt'), all)
-    old_file_path = os.path.join(settings.MEDIA_ROOT, 'changed_palworld_setting', 'PalWorldSettings.txt')
+    write_string_to_second_line(os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer', 'PalWorldSettings.txt'), all)
+    old_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer', 'PalWorldSettings.txt')
     new_file_name = 'PalWorldSettings.ini'
+    write_string_to_first_line(os.path.join(settings.MEDIA_ROOT,server_id, servername,'Pal','Saved','Config','WindowsServer', 'PalWorldSettings.txt'), '[/Script/Pal.PalGameWorldSettings]')
     rename_file(old_file_path, new_file_name)
-    write_string_to_first_line(os.path.join(settings.MEDIA_ROOT,'changed_palworld_setting', 'PalWorldSettings.ini'), '[/Script/Pal.PalGameWorldSettings]')
-    print(all)
-    return render(request, 'server_setting.html', {'combined_list': combined_list})
+    return JsonResponse({'message': 'Settings updated successfully'})#print(all)
+    #return render(request, 'server_setting.html', {'combined_list': combined_list})
 
 def create_new_file(file_path, content):
     with open(file_path, 'w') as file:
@@ -119,8 +149,24 @@ def write_all_text(file_path, section, value):
         config.write(file)
 
 def server_settings(request):
-    file_path = os.path.join(settings.MEDIA_ROOT, 'PalWorldSettings.ini')
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    print(username+ " dname")
+    time.sleep(1)
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    for rowrow in server_cursor.fetchall():
+        server_id = rowrow[0]
+        servername = rowrow[1]
+    file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, 'DefaultPalWorldSettings.ini')
+    #print(file_path)
     config_text = read_all_text(file_path)
+    config_text = config_text.replace("""; This configuration file is a sample of the default server settings.
+; Changes to this file will NOT be reflected on the server.
+; To change the server settings, modify Pal/Saved/Config/WindowsServer/PalWorldSettings.ini.""",'')
     config_text = config_text.replace("[/Script/Pal.PalGameWorldSettings]",'')
     config_text = config_text.replace("OptionSettings=(",'')
     config_text = config_text.replace(")",'')
@@ -144,7 +190,7 @@ def server_settings(request):
                 CREATE TABLE IF NOT EXISTS users(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
-                value TEXT  NOT NULL
+                value TEXT NOT NULL
                 )
                 ''')
                 cursor.execute('''
@@ -171,6 +217,7 @@ def server_settings(request):
             value = value.replace("',)", "")
             values_list.append(value)
         combined_list = zip(names_list, values_list)
+    #print(str(values))
     return render(request, 'server_setting.html', {'combined_list': combined_list})
 
           

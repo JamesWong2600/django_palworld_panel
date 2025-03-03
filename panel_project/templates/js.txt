@@ -1,0 +1,34 @@
+function submitForm() {
+    var formData = new FormData();
+    var rows = document.querySelectorAll('#settings-table tr');
+
+    rows.forEach((row, index) => {
+        var nameElement = row.querySelector('input[name="name"]');
+        var valueElement = row.querySelector('input[name="value"]');
+        
+        if (nameElement && valueElement) {
+            formData.append(`settings[${index}][name]`, nameElement.value);
+            formData.append(`settings[${index}][value]`, valueElement.value);
+        }
+    });
+
+    var csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+    formData.append('csrfmiddlewaretoken', csrfToken);
+
+            // Get the CSRF token from the form
+    var csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+    formData.append('csrfmiddlewaretoken', csrfToken);
+
+    // Send the form data using Fetch API
+    fetch("{% url 'change_server_settings' %}", {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}

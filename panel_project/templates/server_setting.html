@@ -6,11 +6,48 @@
 {% load static %}
 <link rel="stylesheet" type="text/css" href="{% static 'css/server_settings.css' %}">
 <link rel="stylesheet" type="text/css" href="{% static 'css/horizontal_bar.css' %}">
+<script>
+function submitForm() {
+    var names = [];
+    var values = [];
+    var rows = document.querySelectorAll('#settings-table tr');
+
+    rows.forEach((row, index) => {
+        var nameElement = row.querySelector('input[name="name"]');
+        var valueElement = row.querySelector('input[name="value"]');
+        
+        if (nameElement && valueElement) {
+            names.push(nameElement.value);
+            values.push(valueElement.value);
+        }
+    });
+
+    var csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+    var formData = new FormData();
+    formData.append('names', JSON.stringify(names));
+    formData.append('values', JSON.stringify(values));
+    formData.append('csrfmiddlewaretoken', csrfToken);
+
+    // Send the form data using Fetch API
+    fetch("{% url 'change_server_settings' %}", {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+</script>
 <body>
     <nav>
         <ul class="navbar">
             <li><a href="{% url 'server_control' %}">Server Control</a></li>
-            <li><a href="">Server Config Setting</a></li>
+            <li><a href="{% url 'server_settings' %}">Server Config Setting</a></li>
             <li><a href="">Server Backup</a></li>
             <li><a href="">Server Monitor</a></li>
             <li><a href="">File Access</a></li>
@@ -18,23 +55,25 @@
         </ul>
     </nav>
     <h2>Configuration Settings</h2>
-        <table>
+        <table id="settings-table">
             <tr>
                 <th>Setting</th>
                 <th>Value</th>
             </tr>
-            {% for name, value in combined_list %}
+               {% for name, value in combined_list %}
             <tr>
-                <form action="{% url 'change_server_settings' %}" method="post">
+                <!-- <form action="{% url 'change_server_settings' %}" method="post"> -->
+                <form id="myForm">
                 {% csrf_token %}
                 <td><input type="hidden" id="name" name="name" value="{{ name }}">{{ name }}</td>
                 <td><input type="text" id="value" name="value" value="{{ value }}" required></td>
-                <td><button type="submit">Save</button></td>
-                </form>
             </tr>
-            {% endfor %}
-        </table>
+                 {% endfor %}
+               
 
+        </table>
+        <button onclick="submitForm()">Save</button>
+    </form>
 
 </body>
 </html>

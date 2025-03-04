@@ -3,7 +3,7 @@ from django.urls import path
 from panel_app.views import upload_file, login_view, register_view, register, main_page, file_uploaded, edit_file_view
 from panel_app.views import delete_file_view, download_file_view, rename_file_view, start_or_close_server, server_control, execute_exe, server_settings
 from panel_app.views import change_server_settings, login_view, login_account, logout, file_uploaded_rename, send_rename
-from panel_app.views import edit_file_view, save_edit, open_server, close_server, get_usage 
+from panel_app.views import edit_file_view, save_edit, open_server, close_server, get_usage, backup_page, backup_action, download_backup
 urlpatterns = [
     path('main/', main_page, name='main'),
     path('login/', login_view, name='login'),
@@ -31,4 +31,7 @@ urlpatterns = [
     path('open_server/', open_server, name='open_server'),
     path('close_server/', close_server, name='close_server'),
     path('get_usage/', get_usage, name='get_usage'),
+    path('backup_page/', backup_page, name='backup_page'),
+    path('backup_action/', backup_action, name='backup_action'),
+    path('download_backup/', download_backup, name='download_backup')
 ]

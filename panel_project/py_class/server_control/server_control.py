@@ -2,16 +2,9 @@ from django.shortcuts import render, redirect
 from django.core.files.storage import FileSystemStorage
 from django.http import FileResponse
 from django.http import HttpResponse, Http404
-import zipfile
 import os
 from django.conf import settings
-import random
-import string
-import redis
-import shutil
-import ast
 import sqlite3
-import stat
 import subprocess
 import pygetwindow as gw
 import pyautogui

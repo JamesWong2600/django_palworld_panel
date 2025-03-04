@@ -48,9 +48,9 @@ function submitForm() {
         <ul class="navbar">
             <li><a href="{% url 'server_control' %}">Server Control</a></li>
             <li><a href="{% url 'server_settings' %}">Server Config Setting</a></li>
-            <li><a href="">Server Backup</a></li>
+            <li><a href="{% url 'backup_page' %}">Server Backup</a></li>
             <li><a href="">Server Monitor</a></li>
-            <li><a href="">File Access</a></li>
+            <li><a href="{% url 'file_uploaded' %}">File Access</a></li>
             <li class="logout"><a href="{% url 'logout' %}">Logout</a></li>
         </ul>
     </nav>

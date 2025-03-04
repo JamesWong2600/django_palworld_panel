@@ -1,0 +1,42 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backup Files</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/backup_page.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>Backup Files</h1>
+        <table class="backup-table">
+            <thead>
+                <tr>
+                    <th>Backup File</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for server_id, server_name, time_created in combined_list %}
+                <tr>
+                    <td>{{ server_name }} - {{ time_created }}</td>
+                    <td>
+                        <form action="{% url 'download_backup' %}" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="server_id" value="{{ server_id }}">
+                            <input type="hidden" name="server_name" value="{{ server_name }}">
+                            <input type="hidden" name="time_created" value="{{ time_created }}">
+                            <button type="submit" class="download-button">Download</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <form action="{% url 'backup_action' %}" method="post" class="backup-form">
+            {% csrf_token %}
+            <button type="submit" class="backup-button">Backup Now</button>
+        </form>
+    </div>
+</body>
+</html>

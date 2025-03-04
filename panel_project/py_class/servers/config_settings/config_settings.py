@@ -96,7 +96,10 @@ def change_server_settings(request):
     all = all.replace("]", ")")
     new_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer','PalWorldSettings.txt')
     delete_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer','PalWorldSettings.ini')
+    delete_file_path2 = os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer','PalWorldSettings.txt')
     if os.path.exists(delete_file_path):
+       os.remove(delete_file_path) 
+    if os.path.exists(delete_file_path2):
        os.remove(delete_file_path) 
     create_new_file(new_file_path, '')
     write_string_to_second_line(os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer', 'PalWorldSettings.txt'), all)

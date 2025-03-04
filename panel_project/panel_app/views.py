@@ -11,11 +11,10 @@ import redis
 import shutil
 import ast
 import sqlite3
-import stat
-import subprocess
-import pygetwindow as gw
-import pyautogui
-from PIL import Image
+#import stat
+#import subprocess
+#import pyautogui
+#from PIL import Image
 import threading
 from py_class.file_option import  edit_file, delete_file, rename_file
 from py_class.start_or_close_server import execute_exe
@@ -34,19 +33,21 @@ from py_class.server_control.server_control import *
 import time
 import sys
 import select
-import pytesseract
-from pywinauto import findwindows, Desktop
-import uiautomation as auto
+#import pytesseract
+#from pywinauto import findwindows, Desktop
+#import uiautomation as auto
 import keyboard
 import pyperclip
-from pywinauto import Application
-from pywinauto import *
+#from pywinauto import Application
+#from pywinauto import *
 from PIL import ImageGrab
-import pywinauto
-from pywinauto.findwindows import find_windows
-from queue import Queue, Empty
+#import pywinauto
+#from pywinauto.findwindows import find_windows
+#from queue import Queue, Empty
 import psutil
 from django.http import JsonResponse
+from py_class.backup.backup_sql_initial import *
+from datetime import datetime
 
 account()
 check_server()
@@ -93,17 +94,130 @@ def server_controller(request, process_name):
     close_server()
     get_exe_core(request)
       
+servers_backup_create_table()
+
 
 conn = sqlite3.connect('setting_data.db', check_same_thread=False)
 server_conn = sqlite3.connect('servers.db', check_same_thread=False)
 account_conn = sqlite3.connect('account.db', check_same_thread=False)
+servers_backup = sqlite3.connect('servers_backup.db', check_same_thread=False)
+
+
+def download_backup(request):
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    print(username+ " name")
+    #server_cursor = server_conn.cursor()
+    #server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    #for rowrow in server_cursor.fetchall():
+    #    server_id = rowrow[0]
+    #    servername = rowrow[1]
+    backup_cursorr = servers_backup.cursor()  
+    backup_cursorr.execute(f"SELECT server_id, server_name, time_created FROM servers_backup where username = '{username}'")
+    server_id_list = []
+    server_name_list = []
+    time_created_list = []
+    for rowss in backup_cursorr.fetchall():
+      server_id = rowss[0]
+      server_name = rowss[1]
+      time_created = rowss[2]
+      server_id_list.append(server_id)
+      server_name_list.append(server_name)
+      time_created_list.append(time_created)
+      if server_id:
+         print(server_id)
+         print(server_name)
+         print(time_created)
+    combined_list = zip(server_id_list, server_name_list, time_created_list)
+    post_server_name = request.POST.get('server_name')
+    post_server_id = request.POST.get('server_id')
+    post_time_created = request.POST.get('time_created')
+    file_name = f"{post_server_name}_{post_time_created}.zip"
+    print("my file name is "+file_name)
+    print("my server id is "+str(post_server_id))
+    file_path = os.path.join(settings.MEDIA_ROOT, str(post_server_id), 'backup', file_name)
+    print("yes nice")
+    if os.path.exists(file_path):
+        print("yes nice")
+        return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=os.path.basename(file_path))
+    
 
 
 
 
 
 
+def backup_action(request):
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    print(username+ " name")
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    for rowrow in server_cursor.fetchall():
+        server_id = rowrow[0]
+        servername = rowrow[1]
+    current_time = datetime.now()
+    formatted_time = current_time.strftime("%Y_%m_%d__%H_%M_%S")
+    backup_cursorr = servers_backup.cursor()  
+    backup_cursorr.execute('''INSERT INTO servers_backup (username, server_id, server_name, time_created) VALUES (?, ?, ?, ?)''', (username, server_id, servername, formatted_time))
+    servers_backup.commit()
+    backup_cursorr = servers_backup.cursor()  
+    backup_cursorr.execute(f"SELECT server_id, server_name, time_created FROM servers_backup where username = '{username}'")
+    server_id_list = []
+    server_name_list = []
+    time_created_list = []
+    for rowss in backup_cursorr.fetchall():
+      server_id = rowss[0]
+      server_name = rowss[1]
+      time_created = rowss[2]
+      server_id_list.append(server_id)
+      server_name_list.append(server_name)
+      time_created_list.append(time_created)
+      if server_id:
+         print(server_id)
+         print(server_name)
+         print(time_created)
+    combined_list = zip(server_id_list, server_name_list, time_created_list)
+    print(os.path.join(settings.MEDIA_ROOT, server_id, 'backup'))
+    print(os.path.join(settings.MEDIA_ROOT, server_id, server_name))
+    #print(os.path.join(settings.MEDIA_ROOT, server_id, servername,f"{servername}_{formatted_time}"))
+    #f"{servername}_{formatted_time}"
+    shutil.make_archive(os.path.join(settings.MEDIA_ROOT, server_id, "backup", f"{servername}_{str(formatted_time)}"), "zip",
+                         os.path.join(settings.MEDIA_ROOT, server_id,  server_name))
+    return render(request, 'backup_page.html', {'combined_list': combined_list})
 
+
+
+def backup_page(request):
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    print(username+ " name")
+    #server_cursor = server_conn.cursor()
+    #server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    #for rowrow in server_cursor.fetchall():
+        #server_id = rowrow[0]
+        #servername = rowrow[1]
+    backup_cursorr = servers_backup.cursor()
+    backup_cursorr.execute(f"SELECT server_id, server_name, time_created FROM servers_backup where username = '{username}'")
+    for rowss in backup_cursorr.fetchall():
+        server_id = rowss[0]
+        server_name = rowss[1]
+        time_created = rowss[2]
+        if server_id:    
+            print(server_id)
+            print(server_name)
+            print(time_created)
+    return render(request, 'backup_page.html')
+    
 
     
 
@@ -181,30 +295,7 @@ def file_uploaded(request):
 
 
 
-def capture_cmd_window(window_name):
-    # Get the window by its title
-    window = gw.getWindowsWithTitle(window_name)
-    if not window:
-        print(f"No window found with the title: {window_name}")
-        return None
 
-    window = window[0]
-
-    print(f"Window found: {window}")
-    # Activate the window
-    window.activate()
-
-    # Get the window's bounding box
-    left, top, right, bottom = window.left, window.top, window.right, window.bottom
-
-    # Capture the screen area of the window
-    screenshot = pyautogui.screenshot(region=(left, top, right - left, bottom - top))
-
-    # Save the screenshot
-    screenshot.save('cmd_window_capture.png')
-    print("Screenshot saved as cmd_window_capture.png")
-
-    return screenshot
 
 
 
@@ -257,151 +348,11 @@ def upload_file(request):
     else:
         return HttpResponse('Failed to upload file')
     
-
 def start_or_close_server(request):
     exe_path = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90', 'server', 'PalServer.exe')
     execute_exe(exe_path)
     return HttpResponse('sucessfully started or closed the server')
 
-
-
-
-def get_window_text():
-    try:
-        windows = find_windows(title_re=".*PalServer.*")
-        if windows:
-            app = Application(backend="win32").connect(handle=windows[0])
-            window = app.window(handle=windows[0])
-            return window.window_text()
-    except Exception as e:
-        print(f"Error: {e}")
-    return None
-
-
-
-
-
-
-def enqueue_output(pipe, queue):
-    for line in iter(pipe.readline, ''):
-        queue.put(line)
-    pipe.close()
-
-
-def read_output(pipe):
-    for line in iter(pipe.readline, ''):
-        print(line.strip())
-    pipe.close()
-    #Application(backend="win32").start(r"C:\\project\\django_palworld_panel\\panel_project\\uploads\\yOCn2OfYILkQ\\kfc\\PalServer.exe")
-    #return render(request, 'start_or_close_server.html', {'open': "server is opened"})
-
-
-
-
-def read_output(pipe):
-    for line in iter(pipe.readline, b''):
-        print(line.decode().strip())
-    pipe.close()
-
-window_title = r"C:\project\django_palworld_panel\panel_project\uploads\yOCn2OfYILkQ\kfc\Pal\Binaries\Win64\PalServer-Win64-Shipping-Cmd.exe"
-
-
-def subprocess_run(request):
-    windows = gw.getWindowsWithTitle(window_title)
-    if not windows:
-       Application(backend="win32").start(r"C:\\project\\django_palworld_panel\\panel_project\\uploads\\yOCn2OfYILkQ\\kfc\\PalServer.exe")
-    if windows:
-       app = Application().connect(r"C:\\project\\django_palworld_panel\\panel_project\\uploads\\yOCn2OfYILkQ\\kfc\\PalServer.exe")
-       os.system(rf"taskkill /f /im C:\\project\\django_palworld_panel\\panel_project\\uploads\\yOCn2OfYILkQ\\kfc\\PalServer.exe")  
-
-
-    #exe_path = get_exe(request)
-    #exe_path = rf"{exe_path.replace("\\","\\")}"
-    #exe_path = get_exe(request).replace("\\","/")
-    #print(exe_path)
-    #exe_name = os.path.basename(exe_path)
-    #process = subpr*-ocess.Popen(exe_path , stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=False)
-
-    # 等待應用程式啟動
-
-    '''windows = [w.window_text() for w in Desktop(backend="uia").windows() if w.window_text()]
-    print("目前開啟的視窗標題：")
-    for title in windows:
-        print(title)'''
-    '''title=r"C:/project/django_palworld_panel/panel_project/uploads/yOCn2OfYILkQ/kfc/Pal/Binaries/Win64/PalServer-Win64-Shipping-Cmd.exe"'''
-    #window = app.window(title=r"C:/project/django_palworld_panel/panel_project/uploads/yOCn2OfYILkQ/kfc/Pal/Binaries/Win64/PalServer-Win64-Shipping-Cmd.exe")  
-
-    #try:
-        #window = gw.getWindowsWithTitle(r"C:\project\django_palworld_panel\panel_project\uploads\yOCn2OfYILkQ\kfc\Pal\Binaries\Win64\PalServer-Win64-Shipping-Cmd.exe")[0]
-        #time.sleep(1)
-        #left, top, width, height = window.left, window.top, window.width, window.height
-        #left, top, right, bottom = window.rectangle()
-        
-        #screenshot = ImageGrab.grab(bbox=(left, top, right, bottom))
-        #screenshot = pyautogui.screenshot(region=(left, top, width, height))
-        #screenshot.save("windows.png")
-        ## print(f"Captured image from 'windows.png' and saved as 'windows.png'")
-    #except IndexError:
-      #  print(f"No window found with title: {window_title}")
-    '''time.sleep(2)
-    windows = gw.getWindowsWithTitle(exe_name)
-    window = windows[0]
-    window.activate()
-    print("MYTEXT")
-    time.sleep(1)
-    pyautogui.hotkey('ctrl', 'a')
-    time.sleep(0.5)
-    pyautogui.hotkey('ctrl', 'c')
-    time.sleep(0.5)
-    import pyperclip
-    text = pyperclip.paste()
-    print("MYTEXT"+text)
-    #print(exe_name)
-    #subprocess.run([exe_path], shell=True, check=False, capture_output=False, text=False)
-    time.sleep(1.5)
-    #windows = gw.getWindowsWithTitle(exe_name)
-    windows = gw.getWindowsWithTitle(exe_name)[0]
-    windows.activate()
-    time.sleep(1)
-    pyautogui.hotkey('ctrl', 'a')
-    pyautogui.hotkey('ctrl', 'c')
-    time.sleep(0.5)
-    import pyperclip
-    text = pyperclip.paste()
-    print(text)
-    print(str(windows) + "windows")
-    if not windows:
-        print(f"No window found with the title: {exe_path}")
-        return None
-    window = windows[0]
-    print(str(window))
-    left, top, right, bottom = window.left, window.top, window.right, window.bottom
-    width = right - left
-    height = bottom - top
-    capture_width = int(width * 0.95)  # Capture 80% of the width
-    capture_height = int(height * 0.8)  # Capture 80% of the height
-    capture_left = left + int(width * 0.02)  # Start 10% from the left
-    capture_top = top + int(height * 0.1) 
-    screenshot = pyautogui.screenshot(region=(capture_left, capture_top, capture_width, capture_height))
-    screenshot.save(os.path.join(settings.MEDIA_ROOT,'cmd_window_capture.png'))
-    print("Screenshot saved as cmd_window_capture.png")'''
-
-
-
-'''def get_windows(request):  
-    exe_path_core = get_exe(request)  
-    print(exe_path_core+" hp")
-    windows = gw.getWindowsWithTitle(exe_path_core)
-    print(windows)
-    if not windows:
-        print(f"No window found with the title: {exe_path_core}")
-        return None
-    window = windows[0]
-    print(str(window))
-    left, top, right, bottom = window.left, window.top, window.right, window.bottom
-    screenshot = pyautogui.screenshot(region=(left, top, right - left, bottom - top))
-    screenshot.save('cmd_window_capture.png')
-    print("Screenshot saved as cmd_window_capture.png")'''
 
 
 def get_client_ip(request):

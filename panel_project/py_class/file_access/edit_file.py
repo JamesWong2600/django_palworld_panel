@@ -36,8 +36,23 @@ def get_client_ip(request):
         ip = request.META.get('REMOTE_ADDR')
     return ip
 
+    
+
 def edit_file_view(request):
-    file_name = request.POST['file']
+    #current_url = request.build_absolute_uri()
+
+    file_name = request.POST.get('file')
+    print("downloaded " +file_name)
+    #revious_url = request.META.get('HTTP_REFERER', '/')
+    #print(previous_url)
+    #substring =''
+    #if '/file_uploaded/' in previous_url:
+    #    substring = str(previous_url).split('/file_uploaded/')[1]
+    #elif '/edit_file_view/' in previous_url:
+    #    substring = str(previous_url).split('/edit_file_view/')[1]
+    #elif 'edit_file_view/' in previous_url:
+    #    substring = f"engine\\{file_name}"
+    #print(substring)    
     ip = get_client_ip(request)
     update_cursor = account_conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
@@ -50,9 +65,27 @@ def edit_file_view(request):
         server_id = rowrow[0]
         servername = rowrow[1]
     file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, file_name)
+    '''if os.path.isdir(file_path):
+        server_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, substring, file_name)
+        print(server_file_path)
+        folders = list_folders(server_file_path)
+        folders2 = []
+        for fold in folders:
+          fold = fold.replace(server_file_path+"\\", '')
+          folders2.append(fold)
+          files = [(folder, folder, "a") for folder in folders2]   
+        return render(request, 'file-uploaded.html', {'files': files})
+    else:'''
     content = read_all_text(file_path)
     return render(request, 'edit_file_view.html', {'file_name': file_name, 'content': content})
-
+    
+def list_folders(directory):
+    folders = []
+    for item in os.listdir(directory):
+        item_path = os.path.join(directory, item)
+        if os.path.isdir(item_path) or os.path.isfile(item_path):
+            folders.append(item_path)
+    return folders
 
 def save_edit(request):
     file_name = request.POST['file_name']

@@ -22,7 +22,7 @@
             <li><a href="{% url 'server_settings' %}">Server Config Setting</a></li>
             <li><a href="{% url 'backup_page' %}">Server Backup</a></li>
             <li><a href="">Server Monitor</a></li>
-            <li><a href="{% url 'file_uploaded_base' %}">File Access</a></li>
+            <li><a href="{% url 'file_uploaded' %}">File Access</a></li>
             <li class="logout"><a href="{% url 'logout' %}">Logout</a></li>
         </ul>
     </nav>
@@ -32,24 +32,17 @@
         <div class="file-list">
             <h2>Uploaded Files:</h2>
             <ul>
-                {% for file, base_name, file_rename, status, folder_boolean in files %}
+                
+                {% for file, file_rename, status in files %}
                     <li>
                         {% if status == "a" %}
                         <input type="hidden" value="{{ status }}">
-                        <span class="file-name">{{ base_name }}</span>
-                        {% if folder_boolean == "yes" %}
-                        <form action="{% url 'open_file_view' %} " method="post" style="display:inline;">
-                            {% csrf_token %}
-                            <input type="hidden" name="file" value="{{ file }}">
-                            <button type="submit" class="btn edit-btn">open</button>
-                        </form>
-                        {% else %}
-                        <form action="{% url 'open_file_view' %} " method="post" style="display:inline;">
+                        <span class="file-name">{{ file }}</span>
+                        <form action="{% url 'edit_file_view' file %}" method="post" style="display:inline;">
                             {% csrf_token %}
                             <input type="hidden" name="file" value="{{ file }}">
                             <button type="submit" class="btn edit-btn">Edit</button>
                         </form>
-                        {% endif %}
                         <form action="{% url 'delete_file' %}" method="post" style="display:inline;">
                             {% csrf_token %}
                             <input type="hidden" name="file" value="{{ file }}">

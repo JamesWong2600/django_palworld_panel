@@ -14,7 +14,7 @@ import sqlite3
 #import stat
 #import subprocess
 #import pyautogui
-#from PIL import Image
+from pathlib import Path
 import threading
 from py_class.file_option import  edit_file, delete_file, rename_file
 from py_class.start_or_close_server import execute_exe
@@ -186,12 +186,16 @@ def backup_action(request):
     combined_list = zip(server_id_list, server_name_list, time_created_list)
     print(os.path.join(settings.MEDIA_ROOT, server_id, 'backup'))
     print(os.path.join(settings.MEDIA_ROOT, server_id, server_name))
+    server_directory_path = os.path.join(settings.MEDIA_ROOT, server_id,  server_name)
+    output_zip_path = os.path.join(settings.MEDIA_ROOT, server_id, "backup", f"{servername}_{str(formatted_time)}")
     #print(os.path.join(settings.MEDIA_ROOT, server_id, servername,f"{servername}_{formatted_time}"))
     #f"{servername}_{formatted_time}"
-    shutil.make_archive(os.path.join(settings.MEDIA_ROOT, server_id, "backup", f"{servername}_{str(formatted_time)}"), "zip",
-                         os.path.join(settings.MEDIA_ROOT, server_id,  server_name))
+    threading.Thread(target=make_zip_of_directory, args=(server_directory_path, output_zip_path)).start()
     return render(request, 'backup_page.html', {'combined_list': combined_list})
 
+
+def make_zip_of_directory(directory_path, output_zip_path):
+    shutil.make_archive(output_zip_path, 'zip', directory_path)
 
 
 def backup_page(request):
@@ -208,15 +212,19 @@ def backup_page(request):
         #servername = rowrow[1]
     backup_cursorr = servers_backup.cursor()
     backup_cursorr.execute(f"SELECT server_id, server_name, time_created FROM servers_backup where username = '{username}'")
+    server_id_list = []
+    server_name_list = []
+    time_created_list = []
     for rowss in backup_cursorr.fetchall():
         server_id = rowss[0]
         server_name = rowss[1]
         time_created = rowss[2]
-        if server_id:    
-            print(server_id)
-            print(server_name)
-            print(time_created)
-    return render(request, 'backup_page.html')
+        if server_id and server_name and time_created:    
+            server_id_list.append(server_id)
+            server_name_list.append(server_name)
+            time_created_list.append(time_created)
+    combined_list = zip(server_id_list, server_name_list, time_created_list)        
+    return render(request, 'backup_page.html', {'combined_list': combined_list})
     
 
     
@@ -227,13 +235,30 @@ def backup_page(request):
 
 
     
-def list_folders(directory):
-    folders = []
-    for item in os.listdir(directory):
-        item_path = os.path.join(directory, item)
-        if os.path.isdir(item_path) or os.path.isfile(item_path):
-            folders.append(item_path)
-    return folders
+def list_folders(directory, file):
+    folders_path = []
+    directory_boolean = []
+    #base_path = []
+    if os.path.isdir(directory):
+        for item in os.listdir(directory):
+            item_path = os.path.join(directory, item)
+            if os.path.isdir(item_path):
+                if file == None:
+                    folders_path.append(item_path)
+                    #base_path.append(item_path)
+                else:
+                    folders_path.append(str(file)+"\\"+item_path)
+                    #base_path.append(item_path)
+                directory_boolean.append("yes")
+            else:    
+                if file == None:
+                    folders_path.append(item_path)
+                else:
+                    folders_path.append(str(file)+"\\"+item_path)
+                directory_boolean.append("no")
+        return folders_path, directory_boolean, #base_path
+    else:
+        return directory, "no"
 
 
 def generate_random_string(length=12):
@@ -263,10 +288,180 @@ def main_page(request):
     else:
         return render(request, 'main.html',{'server': server, 'username': username})
 
-
-        
+"{% url 'file_uploaded_with_parameter' parameter=file %}"
+"{% url 'file_uploaded_with_parameter' parameter=file %}"
+"{% url 'upload_file'  %}"
+def file_uploaded_with_parameter(request):
+    #print("the args is "+args)
+    current_url = request.build_absolute_uri()
+    current_url = current_url.split('http://127.0.0.1:8000/',1)[1]
+    url_path_items = current_url.split('/')
+    print("Current URL is:", current_url)
+    print("URL Path Items are:", url_path_items)
+    #print("param is "+params)
+    #args = params.split('/')
+    slash_count = current_url.count('/')
+    #print("arg is " +str(args))
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    for row in update_cursor.fetchall():
+        username = row[0]
+    print(username+ " name")
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    for rowrow in server_cursor.fetchall():
+        server_id = rowrow[0]
+        servername = rowrow[1]
+    directory = None    
+    if slash_count == 2:   
+        directory = os.path.join(settings.MEDIA_ROOT,server_id, servername, url_path_items[1])
+    if slash_count == 3:   
+        directory = os.path.join(settings.MEDIA_ROOT,server_id, servername, url_path_items[1], url_path_items[2])
+    if not os.path.exists(directory):
+        return HttpResponse("Directory does not exist")
+    if os.path.isdir(directory):
+        print(directory)
+        folders = list_folders(directory)
+        folders2 = []
+        for fold in folders:
+            fold = fold.replace(directory+"\\", '')
+            folders2.append(fold)
+            files = [(folder, folder, "a") for folder in folders2]   
+            return render(request, 'file-uploaded.html', {'files': files})
+    else:
+        file_name = request.POST['file']
+        print("downloaded " +file_name)
+        content = read_all_text(directory)
+        return render(request, 'edit_file_view.html', {'file_name': file_name, 'content': content})
     
-def file_uploaded(request):
+    #revious_url = request.META.get('HTTP_REFERER', '/')
+    #print(previous_url)
+    #substring =''
+    #if '/file_uploaded/' in previous_url:
+    #    substring = str(previous_url).split('/file_uploaded/')[1]
+    #elif '/edit_file_view/' in previous_url:
+    #    substring = str(previous_url).split('/edit_file_view/')[1]
+    #elif 'edit_file_view/' in previous_url:
+    #    substring = f"engine\\{file_name}"
+    #print(substring)    
+
+
+
+def append_to_url(request, *args):
+    new_segment = request.GET.get('new_segment')
+    if new_segment:
+        new_url = "/file-uploaded/" + "/".join(args) + f"/{new_segment}/"
+        return redirect(new_url)
+    else:
+        return HttpResponse("New segment not provided")
+    
+def open_or_edit_file_view_base(request):
+    file = request.POST.get('file')
+    print("file is "+str(file))
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    username = update_cursor.fetchone()[0]
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    server_id, servername = server_cursor.fetchone()
+    directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, str(file))
+    """if file == "Engine":
+       directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, str(file))
+    elif file == "Binaries":
+       directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, "Engine", "Binaries") 
+    elif file == "Content":
+       directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, "Engine", "Content") 
+    elif file == "Programs":
+       directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, "Engine", "Programs")  
+    elif file == "Saved":
+       directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, "Engine", "Saved")
+    elif file == "ThirdParty":
+       directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, "Engine", "Binaries", "ThirdParty")  
+    elif file == "ThirdParty":
+       directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, "Engine", "Binaries", "ThirdParty")"""         
+    #for root, dirs, _ in os.walk(os.path.join(settings.MEDIA_ROOT, server_id, servername)):
+    #  if file in dirs:
+    #     directory = os.path.join(root, file)        
+    #print("Directory:", directory)
+    folders, directory_boolean = list_folders(directory, file)
+    folders2 = [fold.replace(directory+"\\", '') for fold in folders]
+#folder_paths = [Path(folder).name for folder in folders] 
+    folder_paths = [folder for folder in folders2]  # Original path
+    folder_names = [Path(folder).name for folder in folders2]  # Same name for display
+    folder_types = ["a" for folder in folders2]  # Type of file
+    print("folder_types is:", folder_types)
+    files = zip(folder_paths, folder_names, folder_paths, folder_types, directory_boolean)
+    if os.path.isdir(directory):
+        return render(request, 'file-uploaded.html', {'files': files})
+    else:
+        content = read_all_text(folders)
+        return render(request, 'edit_file_view.html', {'file_name': file, 'content': content})
+
+
+
+def file_uploaded_base(request):
+    ip = get_client_ip(request)
+    file = request.POST.get('file')
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    username = update_cursor.fetchone()[0]
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    server_id, servername = server_cursor.fetchone()
+    directory = os.path.join(settings.MEDIA_ROOT, server_id, servername)
+    #print("Directory:", directory)
+    directory = os.path.join(directory)
+    folders, directory_boolean = list_folders(directory, file)
+    #print("base_path is:", base_path)
+    folders2 = [fold.replace(directory+"\\", '') for fold in folders]
+    folder_paths = [Path(folder).name for folder in folders] 
+    print("the path is" + str(folder_paths))
+    folder_names = [folder for folder in folders2]  # Same name for display
+    folder_types = ["a" for folder in folders2]  # Type of file
+    files = zip(folder_paths, folder_names, folder_paths, folder_types, directory_boolean)
+    return render(request, 'file-uploaded.html', {'files': files})
+
+
+def file_uploaded(request, file1):
+    ip = get_client_ip(request)
+    #path = request.GET.get('path')
+    print("Path is:", file1)
+    # Get username
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    username = update_cursor.fetchone()[0]
+    
+    # Get server info
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    server_id, servername = server_cursor.fetchone()
+    
+    # Build directory path
+    directory = os.path.join(settings.MEDIA_ROOT, server_id, servername)
+    print("Directory:", directory)
+    if file1:
+        directory = os.path.join(directory, file1)
+        
+    # List folders and files
+    folders = list_folders(directory)
+    folders2 = [fold.replace(directory+"\\", '') for fold in folders]
+    files = [(folder, folder, "a") for folder in folders2]
+    
+    return render(request, 'file-uploaded.html', {'files': files})    
+'''def file_uploaded(request, *args):
+    file = request.GET.get('file')
+    print("Arguments:", args)
+    print("file is "+str(file))
+    current_url = request.build_absolute_uri()
+    current_url = current_url.split('http://127.0.0.1:8000/',1)[1]
+    url_path_items = current_url.split('/')
+    print("Current URL is:", current_url)
+    print("URL Path Items are:", url_path_items)
+    #print("param is "+params)
+    #args = params.split('/')
+    slash_count = current_url.count('/')
     ip = get_client_ip(request)
     update_cursor = account_conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
@@ -280,18 +475,25 @@ def file_uploaded(request):
         servername = rowrow[1]
     print(server_id)
     print(servername)
-    server_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername)
-    print(server_file_path)
+    directory = None 
+    if slash_count == 1:    
+        directory = os.path.join(settings.MEDIA_ROOT, server_id, servername)  
+    if slash_count == 2:   
+        directory = os.path.join(settings.MEDIA_ROOT,server_id, servername, url_path_items[1])
+    if slash_count == 3:   
+        directory = os.path.join(settings.MEDIA_ROOT,server_id, servername, url_path_items[1], url_path_items[2])
+    #server_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername)
+    print(directory)
     #server_file_path_branch = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90', '8Pd0j4fKCO90')
     #server_file_path2 = server_file_path.replace(server_file_path_branch, '')
-    print(server_file_path)
-    folders = list_folders(server_file_path)
+    print(directory)
+    folders = list_folders(directory)
     folders2 = []
     for fold in folders:
-        fold = fold.replace(server_file_path+"\\", '')
+        fold = fold.replace(directory+"\\", '')
         folders2.append(fold)
     files = [(folder, folder, "a") for folder in folders2]   
-    return render(request, 'file-uploaded.html', {'files': files})
+    return render(request, 'file-uploaded.html', {'files': files})'''
 
 
 

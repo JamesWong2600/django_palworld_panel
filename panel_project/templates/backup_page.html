@@ -5,8 +5,19 @@
     <title>Backup Files</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/backup_page.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/horizontal_bar.css' %}">
 </head>
 <body>
+    <nav>
+        <ul class="navbar">
+            <li><a href="{% url 'server_control' %}">Server Control</a></li>
+            <li><a href="{% url 'server_settings' %}">Server Config Setting</a></li>
+            <li><a href="{% url 'backup_page' %}">Server Backup</a></li>
+            <li><a href="">Server Monitor</a></li>
+            <li><a href="{% url 'file_uploaded' %}">File Access</a></li>
+            <li class="logout"><a href="{% url 'logout' %}">Logout</a></li>
+        </ul>
+    </nav>
     <div class="container">
         <h1>Backup Files</h1>
         <table class="backup-table">

@@ -8,7 +8,7 @@
 <body>
     <div class="container">
         <h1>Rename File: {{ file_name }}</h1>
-        <form action="{% url 'save_edit' %}" method="post" class="edit-form">
+        <form action="{% url 'save_edit'  %}" method="post" class="edit-form">
             {% csrf_token %}
             <div class="form-group">
                 <label for="content">File Content:</label>

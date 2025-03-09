@@ -12,6 +12,7 @@ import shutil
 import ast
 import sqlite3
 import stat
+from pathlib import Path
 
 
 conn = sqlite3.connect('setting_data.db', check_same_thread=False)
@@ -24,7 +25,10 @@ account_conn = sqlite3.connect('account.db', check_same_thread=False)
 
 
 def delete_file_view(request):
-    file_name = request.POST['file']
+    file_name = request.POST.get('file')
+    base_name = request.POST.get('base_name')
+    print("delete " +base_name)
+    print("delete " +file_name)
     ip = get_client_ip(request)
     update_cursor = account_conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
@@ -36,11 +40,41 @@ def delete_file_view(request):
     for rowrow in server_cursor.fetchall():
         server_id = rowrow[0]
         servername = rowrow[1]
-    file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, file_name)
+    file_path = os.path.join(file_name)
+    #current_dir = file_path.replace(Path(file_path).name,'')
+    #print("current_dir is:", current_dir)
+    print(" file name ="+file_path)
     os.chmod(file_path, stat.S_IWRITE)
     delete_file(file_path)
-    return redirect('file_uploaded')
+    folders, directory_boolean = delete_list_folders(file_path, base_name)
+    folders2 = [fold.replace(file_path+"\\", '') for fold in folders]
+#folder_paths = [Path(folder).name for folder in folders] 
+    folder_paths = [folder for folder in folders2]  # Original path
+    folder_names = [Path(folder).name for folder in folders2]  # Same name for display
+    folder_types = ["a" for folder in folders2]  # Type of file
+    print("folder_types is:", folder_paths)
+    files = zip(folder_paths, folder_names, folder_paths, folder_types, directory_boolean)
+    return render(request, 'file-uploaded.html', {'files': files}) 
 
+def delete_list_folders(file_name, base_name):
+    folders_path = []
+    directory_boolean = []
+    print("base_name is:", base_name)
+    file_name = file_name.replace("\\"+base_name, "")
+    print("file_name is:", file_name)
+    #base_path = []
+    if os.path.isdir(file_name):
+        for item in os.listdir(file_name):
+            item_path = os.path.join(file_name, item)
+            if os.path.isdir(item_path):
+                folders_path.append(item_path)
+                directory_boolean.append("yes")
+            else:    
+                folders_path.append(item_path)
+                directory_boolean.append("no")
+        return folders_path, directory_boolean, #base_path
+    #else:
+        #return directory, "no"
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:

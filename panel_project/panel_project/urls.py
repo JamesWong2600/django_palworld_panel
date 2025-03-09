@@ -5,6 +5,7 @@ from panel_app.views import delete_file_view, download_file_view, rename_file_vi
 from panel_app.views import change_server_settings, login_view, login_account, logout, file_uploaded_rename, send_rename
 from panel_app.views import edit_file_view, save_edit, open_server, close_server, get_usage, backup_page, backup_action, download_backup
 from panel_app.views import file_uploaded_with_parameter, open_or_edit_file_view_base, file_uploaded_base
+from panel_app.views import file_explorer_view, rename_file_backend
 urlpatterns = [
     path('main/', main_page, name='main'),
     path('login/', login_view, name='login'),
@@ -33,10 +34,10 @@ urlpatterns = [
     path('login/', login_view, name='login'),
     path('login_account/', login_account, name='login_account'),
     path('logout/', logout, name='logout'),
-    path('file_uploaded_rename/', file_uploaded_rename, name='file_uploaded_rename'),
+    path('file_uploaded_rename/', file_uploaded_rename, name='file_uploaded_rename'), #3
     path('send_rename/', send_rename, name='send_rename'),
     path('edit_file_view/', edit_file_view, name='edit_file_view'),
-    path('open_file_view/', open_or_edit_file_view_base, name='open_file_view'),
+    path('open_file_view/', open_or_edit_file_view_base, name='open_file_view'),#2
     path('save_edit/', save_edit, name='save_edit'),
     path('open_server/', open_server, name='open_server'),
     path('close_server/', close_server, name='close_server'),
@@ -45,4 +46,6 @@ urlpatterns = [
     path('backup_action/', backup_action, name='backup_action'),
     path('download_backup/', download_backup, name='download_backup'),
     path('Content/', edit_file_view, name='edit_file_view_content'),
+    path('file_explorer/', file_explorer_view, name='file_explorer'), #1
+    path('rename_file_backend/',rename_file_backend, name='rename_file_backend'),#4
 ]

@@ -48,6 +48,9 @@ import psutil
 from django.http import JsonResponse
 from py_class.backup.backup_sql_initial import *
 from datetime import datetime
+from django_redis import get_redis_connection
+from django.core.cache import cache
+
 
 account()
 check_server()
@@ -102,6 +105,30 @@ server_conn = sqlite3.connect('servers.db', check_same_thread=False)
 account_conn = sqlite3.connect('account.db', check_same_thread=False)
 servers_backup = sqlite3.connect('servers_backup.db', check_same_thread=False)
 
+class DjangoCache:
+    def set_value(self, key: str, value: any, timeout=None):
+        return cache.set(key, value, timeout)
+        
+    def get_value(self, key: str, default=None):
+        return cache.get(key, default)
+        
+    def delete_value(self, key: str):
+        return cache.delete(key)
+    def set_list(self, key: str, value: any, timeout=None):
+        if isinstance(value, list):
+            value = json.dumps(value)  # Convert list to JSON string
+        return cache.set(key, value, timeout)
+        
+    def get_list(self, key: str, default=None):
+        value = cache.get(key, default)
+        if isinstance(value, str):
+            try:
+                return json.loads(value)  # Convert JSON string back to list
+            except json.JSONDecodeError:
+                return value
+        return value
+    def delete_list(self, key: str) -> bool:
+        return cache.delete(key)
 
 def download_backup(request):
     ip = get_client_ip(request)
@@ -238,21 +265,28 @@ def backup_page(request):
 def list_folders(directory, file):
     folders_path = []
     directory_boolean = []
-    #base_path = []
+    #print("directory is "+directory)
+    #print("file is "+str(file))
+    if file == None:
+        directory = str(directory).replace("\\"+str(file), '')
+        print("directory is "+directory)
     if os.path.isdir(directory):
         for item in os.listdir(directory):
             item_path = os.path.join(directory, item)
             if os.path.isdir(item_path):
                 if file == None:
                     folders_path.append(item_path)
+                    #print("item path is : "+item_path)
                     #base_path.append(item_path)
                 else:
                     folders_path.append(str(file)+"\\"+item_path)
+                    print("item path is : "+item_path)
                     #base_path.append(item_path)
                 directory_boolean.append("yes")
             else:    
                 if file == None:
                     folders_path.append(item_path)
+                    print("item path is : "+item_path)
                 else:
                     folders_path.append(str(file)+"\\"+item_path)
                 directory_boolean.append("no")
@@ -331,7 +365,7 @@ def file_uploaded_with_parameter(request):
             return render(request, 'file-uploaded.html', {'files': files})
     else:
         file_name = request.POST['file']
-        print("downloaded " +file_name)
+       # print("downloaded " +file_name)
         content = read_all_text(directory)
         return render(request, 'edit_file_view.html', {'file_name': file_name, 'content': content})
     
@@ -356,8 +390,103 @@ def append_to_url(request, *args):
     else:
         return HttpResponse("New segment not provided")
     
+def file_explorer_view(request):
+    file = request.POST.get('file')
+    #action = request.POST.get('action')
+    print("file are "+str(file))
+    ip = get_client_ip(request)
+    cache_service = DjangoCache()
+    #if not file == None:
+        #cache_service.set_value(ip, file)   
+    #print("Cached value is:", cached_value)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    username = update_cursor.fetchone()[0]
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    server_id, servername = server_cursor.fetchone()
+    directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, str(file))
+    print("Directory:", directory)
+    folders, directory_boolean = list_folders(directory, file)
+    folders2 = [fold.replace(directory+"\\", '') for fold in folders]
+    folder_paths = [folder for folder in folders2]  # Original path
+    folder_names = [Path(folder).name for folder in folders2]  # Same name for display
+    folder_types = ["a" for folder in folders2]  # Type of file
+    #print("folder_types is:", folder_types)
+    if file == None:
+        cache_service.set_list(ip, folder_paths)
+
+    elif not file == None:
+        folder_paths = cache_service.get_list(ip)
+        cache_service.delete_list(ip)
+        print("cache_paths is:", folder_paths)
+    files = zip(folder_paths , folder_names, folder_paths, folder_types, directory_boolean)
+    return render(request, 'file-uploaded.html', {'files': files})  
+    
+
+    
+
+
 def open_or_edit_file_view_base(request):
     file = request.POST.get('file')
+    base_file = request.POST.get('base_name')
+    print("file is "+str(base_file))
+    #action = request.POST.get('action')
+    print("file ares "+str(file))
+    ip = get_client_ip(request)
+    update_cursor = account_conn.cursor()
+    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+    username = update_cursor.fetchone()[0]
+    server_cursor = server_conn.cursor()
+    server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    server_id, servername = server_cursor.fetchone()
+    directory = os.path.join(file)
+    if os.path.isdir(directory):
+        folders, directory_boolean = open_or_edit_file_view_list_folders(file, base_file)
+        folders2 = [fold.replace(directory+"\\", '') for fold in folders]
+        print("folders is:", folders)
+        #folder_paths = [Path(folder).name for folder in folders] 
+        folder_paths = [folder for folder in folders]  # Original path
+        folder_names = [Path(folder).name for folder in folders2]  # Same name for display
+        folder_types = ["a" for folder in folders2]  # Type of file
+        print("folder_types ifff:", folder_types)
+        cache_service = DjangoCache()
+        print("folder_paths is:", folder_paths)
+        cache_service.set_list(ip, folder_paths)
+        folder_paths = cache_service.get_list(ip)
+        print("aaaaaaaaaaaaaaaaaaaaaaaaaaaa"+str(folder_paths))
+        files = zip(folder_paths, folder_names, folder_paths, folder_types, directory_boolean)
+        if os.path.isdir(directory):
+            return render(request, 'file-uploaded.html', {'files': files})  
+        """ return render(request, 'file-uploaded.html', {
+             'files': files,
+             'redirect_url': 'file_explorer'
+        }) """
+
+    else:
+        content = read_all_text(directory)
+    return render(request, 'edit_file_view.html', {'file_name': file, 'content': content})
+    
+def open_or_edit_file_view_list_folders(directory, file):
+    folders_path = []
+    directory_boolean = []
+    for item in os.listdir(directory):
+        item_path = os.path.join(directory, item)
+        print("item path is : "+item_path)
+        if os.path.isdir(item_path):
+            folders_path.append(item_path)
+            print("item path is : "+item_path)
+            #base_path.append(item_path)
+            directory_boolean.append("yes")
+        else:    
+            folders_path.append(item_path)
+            print("item path is : "+item_path)
+            folders_path.append(str(file)+"\\"+item_path)
+            directory_boolean.append("no")
+    return folders_path, directory_boolean, #base_path
+"""def open_or_edit_file_view_base(request):
+    file = request.POST.get('file')
+    #action = request.POST.get('action')
     print("file is "+str(file))
     ip = get_client_ip(request)
     update_cursor = account_conn.cursor()
@@ -367,7 +496,7 @@ def open_or_edit_file_view_base(request):
     server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
     server_id, servername = server_cursor.fetchone()
     directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, str(file))
-    """if file == "Engine":
+    if file == "Engine":
        directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, str(file))
     elif file == "Binaries":
        directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, "Engine", "Binaries") 
@@ -380,7 +509,7 @@ def open_or_edit_file_view_base(request):
     elif file == "ThirdParty":
        directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, "Engine", "Binaries", "ThirdParty")  
     elif file == "ThirdParty":
-       directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, "Engine", "Binaries", "ThirdParty")"""         
+       directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, "Engine", "Binaries", "ThirdParty")        
     #for root, dirs, _ in os.walk(os.path.join(settings.MEDIA_ROOT, server_id, servername)):
     #  if file in dirs:
     #     directory = os.path.join(root, file)        
@@ -397,7 +526,7 @@ def open_or_edit_file_view_base(request):
         return render(request, 'file-uploaded.html', {'files': files})
     else:
         content = read_all_text(folders)
-        return render(request, 'edit_file_view.html', {'file_name': file, 'content': content})
+        return render(request, 'edit_file_view.html', {'file_name': file, 'content': content})"""
 
 
 

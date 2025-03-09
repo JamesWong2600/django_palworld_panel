@@ -21,7 +21,7 @@
         Welcome, {{ username }}!
     </div>
     {% if server %}
-    <form action="{% url 'file_uploaded_base' %}" method="post" enctype="multipart/form-data">
+    <form action="{% url 'file_explorer' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="form-group">
             <label for="servername">Servername: {{ server }}</label>

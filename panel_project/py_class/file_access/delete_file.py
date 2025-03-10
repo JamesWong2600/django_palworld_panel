@@ -13,7 +13,7 @@ import ast
 import sqlite3
 import stat
 from pathlib import Path
-
+import re
 
 conn = sqlite3.connect('setting_data.db', check_same_thread=False)
 server_conn = sqlite3.connect('servers.db', check_same_thread=False)
@@ -72,6 +72,19 @@ def delete_list_folders(file_name, base_name):
             else:    
                 folders_path.append(item_path)
                 directory_boolean.append("no")
+        if folders_path == []:
+            file_name = file_name.split('\\')
+            file_name = file_name[:-1]
+            file_name = '\\'.join(file_name)
+            print("folders_path is:", str(file_name))
+            for item in os.listdir(file_name):
+                item_path = os.path.join(file_name, item)
+                if os.path.isdir(item_path):
+                    folders_path.append(item_path)
+                    directory_boolean.append("yes")
+                else:    
+                    folders_path.append(item_path)
+                    directory_boolean.append("no")
         return folders_path, directory_boolean, #base_path
     #else:
         #return directory, "no"

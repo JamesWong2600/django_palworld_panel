@@ -105,7 +105,7 @@
                         </form>
                         <form style="display:inline;" onsubmit="event.preventDefault(); rename_file({{ forloop.counter }})">
                             {% csrf_token %}
-                            <input type="text" id="file_{{ forloop.counter }}" name="file" value="{{ file }}">
+                            <input type="hidden" id="file_{{ forloop.counter }}" name="file" value="{{ file }}">
                             <input type="hidden" id="base_name_{{ forloop.counter }}" name="base_name" value="{{ base_name }}">
                             <!-- <input type="hidden" name="original_file_name" value="{{ file_rename }}"> -->
                             <button type="submit" class="btn rename-btn" >Rename</button>

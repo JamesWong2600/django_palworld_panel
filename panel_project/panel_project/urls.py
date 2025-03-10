@@ -8,8 +8,8 @@ from panel_app.views import file_uploaded_with_parameter, open_or_edit_file_view
 from panel_app.views import file_explorer_view, rename_file_backend
 urlpatterns = [
     path('main/', main_page, name='main'),
-    path('login/', login_view, name='login'),
-    path('', register_view, name='register_view'),
+    path('', login_view, name='login'),
+    path('register/', register_view, name='register_view'),
     #path('start_or_close_server/', start_or_close_server, name='start_or_close_server'),
     path('register/', register, name='register'),
     path('server_control/', server_control, name='server_control'),
@@ -24,16 +24,16 @@ urlpatterns = [
     #path('append-to-url/<path:args>/', append_to_url, name='append_to_url'),
     #path('edit/<str:parameter>/', edit_file_view, name='edit_file'),
     path('edit/<str:file_name>/', edit_file_view, name='edit_file'),
-    path('delete_file/', delete_file_view, name='delete_file'),
-    path('download/', download_file_view, name='download_file'),
+    path('delete_file/', delete_file_view, name='delete_file'), #delete
+    path('download/', download_file_view, name='download_file'), #download
     path('rename_file_view/<str:file_name>', rename_file_view, name='rename_file_view'),
     path('execute_exe/', execute_exe, name='execute_exe'),
     path('admin/', admin.site.urls),
     path('server_settings/', server_settings, name='server_settings'),    
     path('change_server_settings/', change_server_settings, name='change_server_settings'),
     path('login/', login_view, name='login'),
-    path('login_account/', login_account, name='login_account'),
-    path('logout/', logout, name='logout'),
+    path('login_account/', login_account, name='login_account'),#log
+    path('logout/', logout, name='logout'), #logout
     path('file_uploaded_rename/', file_uploaded_rename, name='file_uploaded_rename'), #3
     path('send_rename/', send_rename, name='send_rename'),
     path('edit_file_view/', edit_file_view, name='edit_file_view'),

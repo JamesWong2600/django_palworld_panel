@@ -4,6 +4,7 @@ from django.http import FileResponse
 from django.http import HttpResponse
 from django.conf import settings
 import sqlite3
+from django.core.cache import cache
 
 conn = sqlite3.connect('setting_data.db', check_same_thread=False)
 server_conn = sqlite3.connect('servers.db', check_same_thread=False)
@@ -17,6 +18,8 @@ def logout(request):
     ip = get_client_ip(request)
     update_cursor.execute('''UPDATE accounts SET login_status = ? WHERE ip_address = ?''', ('0', ip))
     account_conn.commit()
+    cache.delete(ip+'_login_status')
+    print(cache.get(ip+'_login_status'))
     return redirect('login')
     
 def get_client_ip(request):
@@ -43,4 +46,6 @@ def login_account(request):
         error = 'username or password is incorrect'
         return render(request, 'login.html', {'error': error})
     else:
+        cache.set(ip+'_login_status', "true")
+        print(cache.get(ip+'_login_status'))
         return redirect('main')

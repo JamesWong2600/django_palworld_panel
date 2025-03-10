@@ -12,7 +12,8 @@ import shutil
 import ast
 import sqlite3
 import stat
-
+from io import BytesIO
+from zipfile import ZipFile
 
 conn = sqlite3.connect('setting_data.db', check_same_thread=False)
 server_conn = sqlite3.connect('servers.db', check_same_thread=False)
@@ -47,12 +48,31 @@ def download_file_view(request):
     try:
         if os.path.isdir(file_path):
             # Create a zip file of the folder
-            zip_file_path = file_path + '.zip'
-            shutil.make_archive(file_path, 'zip', file_path)
-            return FileResponse(open(zip_file_path, 'rb'), as_attachment=True, filename=os.path.basename(zip_file_path))
+            #zip_file_path = file_path + '.zip'
+            #print(" file name "+file_path)
+            #shutil.make_archive(file_path, 'zip', file_path)
+            zip_buffer = create_zip_in_memory(file_path)
+            return FileResponse(zip_buffer, as_attachment=True, filename=os.path.basename(file_path)+".zip")
         else:
             return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=os.path.basename(file_path))
     except FileNotFoundError:
         raise Http404("File not found")
     except PermissionError:
         return HttpResponse("Permission denied", status=403)
+    
+def create_zip_in_memory(directory_path):
+    # Create BytesIO object
+    in_memory_zip = BytesIO()
+    
+    # Create ZipFile object
+    with ZipFile(in_memory_zip, 'w') as zipf:
+        # Walk through directory
+        for foldername, subfolders, filenames in os.walk(directory_path):
+            for filename in filenames:
+                file_path = os.path.join(foldername, filename)
+                arcname = os.path.relpath(file_path, directory_path)
+                zipf.write(file_path, arcname)
+    
+    # Reset file pointer
+    in_memory_zip.seek(0)
+    return in_memory_zip    

@@ -57,3 +57,29 @@ h1 {
 .submit-btn:hover {
     background-color: #45a049;
 }
+
+.code-editor {
+    font-family: 'Consolas', 'Courier New', monospace;
+    white-space: pre-wrap;       /* Preserve whitespace and wrap */
+    word-wrap: break-word;       /* Break long words */
+    overflow-wrap: break-word;   /* Modern version of word-wrap */
+    overflow-x: auto;
+    tab-size: 4;
+    -moz-tab-size: 4;
+    -o-tab-size: 4;
+    width: 100%;
+    resize: vertical;
+    padding: 10px;
+    line-height: 1.5;
+    font-size: 14px;
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    -webkit-text-fill-color: initial; /* Preserve spaces in Webkit browsers */
+}
+
+.code-editor:focus {
+    outline: none;
+    border-color: #66afe9;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102,175,233,.6);
+}

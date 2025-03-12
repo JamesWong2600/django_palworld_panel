@@ -30,8 +30,7 @@
     </form>
     {% else %}
     <h2>Upload File</h2>
-    {% with args_list=file|default_if_none:""|add:"/"|add:file_rename %}
-    <form action="{% url 'file_uploaded_with_parameter' args_list %}" method="post" enctype="multipart/form-data">
+    <form action="{% url 'upload_file' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="form-group">
             <label for="servername">Servername</label>
@@ -44,7 +43,6 @@
         </div>
         <button type="submit">Submit</button>
     </form>
-    {% endwith %}
     {% endif %}
 </div>
 </div>

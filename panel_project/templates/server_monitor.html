@@ -1,0 +1,17 @@
+<html>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/horizontal_bar.css' %}">
+    <body>
+        <nav>
+            <ul class="navbar">
+                <li><a href="{% url 'server_control' %}">Server Control</a></li>
+                <li><a href="{% url 'server_settings' %}">Server Config Setting</a></li>
+                <li><a href="{% url 'backup_page' %}">Server Backup</a></li>
+                <li><a href="{% url 'server_monitor' %}">Server Monitor</a></li>
+                <li><a href="{% url 'file_explorer' %}">File Access</a></li>
+                <li class="logout"><a href="{% url 'logout' %}">Logout</a></li>
+            </ul>
+        </nav>
+    </body>
+    <h1>coming soon</h1>
+</html>

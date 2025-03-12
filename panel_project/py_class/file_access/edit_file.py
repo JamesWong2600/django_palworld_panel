@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.core.files.storage import FileSystemStorage
-from django.http import FileResponse
+from django.http import FileResponse, JsonResponse
 from django.http import HttpResponse, Http404
 import zipfile
 import os
@@ -87,9 +87,10 @@ def list_folders(directory):
             folders.append(item_path)
     return folders
 
-def save_edit(request):
+def save_edit_notused(request):
     file_name = request.POST['file_name']
     content = request.POST['content']
+    base_name = request.POST['base_name']
     ip = get_client_ip(request)
     update_cursor = account_conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
@@ -98,16 +99,19 @@ def save_edit(request):
     print(username+ " name")
     server_cursor = server_conn.cursor()
     server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    print("james_test")
     for rowrow in server_cursor.fetchall():
         server_id = rowrow[0]
         servername = rowrow[1]
     if not file_name.endswith('.txt'):
         new_file_name = file_name + '.txt'
         old_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, file_name)
+        print("old file path is "+old_file_path)
         new_file_name = os.path.join(settings.MEDIA_ROOT, server_id, servername, new_file_name)
         os.rename(old_file_path, new_file_name)
         with open(new_file_name, 'w') as file:
-            file.write(content)
+            file.write(content) 
+            print("weittedddddddddddddddddddddddddddddd")
         with open(new_file_name, 'r') as file:
             print(file.read())
         os.rename(new_file_name, old_file_path)    
@@ -116,4 +120,6 @@ def save_edit(request):
             file.write(content)
         with open(new_file_name, 'r') as file:
             print(file.read())
-    return redirect('file_uploaded')
+    previous_url = request.META.get('HTTP_REFERER', '')         
+    #return redirect('file_explorer')
+    return JsonResponse({'status': 'success', 'message': 'File saved successfully'})

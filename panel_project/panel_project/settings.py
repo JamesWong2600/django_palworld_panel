@@ -11,11 +11,13 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
-
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
+BASED_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PARENT_DIR = os.path.dirname(BASED_DIR)
+UPLOADS_DIR = os.path.join(PARENT_DIR, 'uploads')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -25,10 +27,13 @@ SECRET_KEY = 'django-insecure-*j!bm)rm)bdv49k=mcq7v^&ee+$q011c9x8615#n9m76(a+y29
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+
 ALLOWED_HOSTS = ['*']
 
 CONFIG = BASE_DIR / 'config'
-MEDIA_ROOT = BASE_DIR / 'uploads'
+MEDIA_ROOT = UPLOADS_DIR
+#MEDIA_ROOT = BASE_DIR / 'uploads'
 MEDIA_URL = '/uploads/'
 # Application definition
 

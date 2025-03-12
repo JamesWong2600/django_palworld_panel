@@ -5,15 +5,45 @@
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/edit_file_view.css' %}">
 </head>
+<script>
+function submitForm(event) {
+    event.preventDefault();
+    const form = event.target;
+    
+    fetch("{% url 'open_file_view'  %}", {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+            'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        showMessage(data.message, data.status);
+        if (data.status === 'success') {
+            alert('File content updated successfully');
+            }
+    }).catch(error => {
+            showMessage('An error occurred', 'error');
+        });
+}
+</script>
 <body>
     <div class="container">
-        <h1>Rename File: {{ file_name }}</h1>
-        <form action="{% url 'save_edit'  %}" method="post" class="edit-form">
+        <h1>Rename File: {{ base_name }}</h1>
+        <form class="edit-form" method="post" action="{% url 'open_file_view'  %}">
             {% csrf_token %}
             <div class="form-group">
                 <label for="content">File Content:</label>
-                <textarea id="content" name="content" class="form-control">{{ content }}</textarea>
+                <textarea 
+                id="content" 
+                name="content" 
+                class="form-control code-editor" 
+                wrap="off"
+                rows="20" 
+                spellcheck="false">{{ content|safe }}</textarea>
             </div>
+            <input type="hidden" name="base_name" value="{{ base_name }}">
             <input type="hidden" name="file_name" value="{{ file_name }}">
             <div class="form-actions">
                 <button type="submit" class="btn submit-btn">Save Changes</button>

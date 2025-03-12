@@ -444,9 +444,20 @@ def open_or_edit_file_view_base(request):
     if not login_status == "true":
         return redirect('login')
     else:
+        action = 0
         file = request.POST.get('file')
         base_file = request.POST.get('base_name')
-        print("file is "+str(base_file))
+        print("file yiis "+str(base_file))
+        #action = request.POST.get('action')
+        print("file arrres "+str(file))
+        if file == None or base_file == None:
+            file = cache.get(ip+'edit_file')
+            base_file = cache.get(ip+'edit_base')
+            action = 1
+        else:
+            cache.set(ip+'edit_file', file)
+            cache.set(ip+'edit_base', base_file)
+        print("basefile is "+str(base_file))
         #action = request.POST.get('action')
         print("file ares "+str(file))
         update_cursor = account_conn.cursor()
@@ -456,38 +467,104 @@ def open_or_edit_file_view_base(request):
         server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
         server_id, servername = server_cursor.fetchone()
         directory = os.path.join(file)
-        if os.path.isdir(directory):
-            folders, directory_boolean = open_or_edit_file_view_list_folders(file, base_file)
-            folders2 = [fold.replace(directory+"\\", '') for fold in folders]
-            print("folders is:", folders)
-            #folder_paths = [Path(folder).name for folder in folders] 
-            folder_paths = [folder for folder in folders]  # Original path
-            folder_names = [Path(folder).name for folder in folders2]  # Same name for display
-            folder_types = ["a" for folder in folders2]  # Type of file
-            print("folder_types ifff:", folder_types)
-            cache_service = DjangoCache()
-            print("folder_paths is:", folder_paths)
-            cache_service.set_list(ip, folder_paths)
-            folder_paths = cache_service.get_list(ip)
-            print("aaaaaaaaaaaaaaaaaaaaaaaaaaaa"+str(folder_paths))
-            files = zip(folder_paths, folder_names, folder_paths, folder_types, directory_boolean)
-            if os.path.isdir(directory):
-                return render(request, 'file-uploaded.html', {'files': files})  
-            """ return render(request, 'file-uploaded.html', {
-                'files': files,
-                'redirect_url': 'file_explorer'
-            }) """
+        if action == 0:
+                if os.path.isdir(directory):
+                    folders, directory_boolean = open_or_edit_file_view_list_folders(file, base_file)
+                    folders2 = [fold.replace(directory+"\\", '') for fold in folders]
+                    print("folders is:", folders)
+                    #folder_paths = [Path(folder).name for folder in folders] 
+                    folder_paths = [folder for folder in folders]  # Original path
+                    folder_names = [Path(folder).name for folder in folders2]  # Same name for display
+                    folder_types = ["a" for folder in folders2]  # Type of file
+                    print("folder_types ifff:", folder_types)
+                    cache_service = DjangoCache()
+                    print("folder_paths is:", folder_paths)
+                    cache_service.set_list(ip, folder_paths)
+                    folder_paths = cache_service.get_list(ip)
+                    print("aaaaaaaaaaaaaaaaaaaaaaaaaaaa"+str(folder_paths))
+                    files = zip(folder_paths, folder_names, folder_paths, folder_types, directory_boolean)
+                    if os.path.isdir(directory):
+                        return render(request, 'file-uploaded.html', {'files': files})  
+                    """ return render(request, 'file-uploaded.html', {
+                        'files': files,
+                        'redirect_url': 'file_explorer'
+                    }) """
 
+                else:
+                    content = read_all_text(directory)
+                    return render(request, 'edit_file_view.html', {'file_name': file, 'content': content, 'base_name': base_file})
         else:
-            content = read_all_text(directory)
-        return render(request, 'edit_file_view.html', {'file_name': file, 'content': content})
-    
+            content = rf"{request.POST.get('content')}"
+            print("content is "+str(content))
+            processed_content = remove_empty_lines(content)
+            if not file.endswith('.txt'):
+                new_file_name = file + '.txt'
+                old_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, file)
+                print("old file path is "+old_file_path)
+                new_file_name = os.path.join(settings.MEDIA_ROOT, server_id, servername, new_file_name)
+                os.rename(old_file_path, new_file_name)
+                with open(new_file_name, 'w') as filess:
+                    filess.write(processed_content) 
+                    print("weittedddddddddddddddddddddddddddddd")
+                with open(new_file_name, 'r') as filess:
+                    print(filess.read())
+                os.rename(new_file_name, old_file_path)    
+            else:
+                with open(new_file_name, 'w') as filess:
+                    filess.write(processed_content)
+                with open(new_file_name, 'r') as filess:
+                    print(filess.read())  
+            gfolders, gdirectory_boolean = edit_return_list_folders(file, base_file)
+            gfolders2 = [fold.replace(directory+"\\", '') for fold in gfolders]
+            print("folders is:", gfolders)
+            #folder_paths = [Path(folder).name for folder in folders] 
+            gfolder_paths = [gfolder for gfolder in gfolders]  # Original path
+            gfolder_names = [Path(gfolder).name for gfolder in gfolders2]  # Same name for display
+            gfolder_types = ["a" for folder in gfolders2]  # Type of file
+            # print("folder_types ifff:", folder_types)
+            #cache_service = DjangoCache()
+            #print("folder_paths is:", folder_paths)
+            #cache_service.set_list(ip, folder_paths)
+            #folder_paths = cache_service.get_list(ip)
+            print("aaaaaaaaaaaaaaaaaaaaaaaaaaaa"+str(gfolder_paths))
+            gfiles = zip(gfolder_paths, gfolder_names, gfolder_paths, gfolder_types, gdirectory_boolean)
+            return render(request, 'file-uploaded.html', {'files': gfiles})  
+        
+def remove_empty_lines(text):
+    # Split text into lines and filter out empty lines while preserving indentation
+    lines = text.splitlines()
+    non_empty_lines = [line for line in lines if line.strip()]
+    # Rejoin lines with newline character
+    return '\n'.join(non_empty_lines)       
+   
+
+def edit_return_list_folders(directory, file):
+    folders_path = []
+    directory_boolean = []
+    directory = directory.replace("\\"+file, '')
+    print("directory is "+directory)
+    for item in os.listdir(directory):
+        item_path = os.path.join(directory, item)
+        print("item path is a: "+item_path)
+        if os.path.isdir(item_path):
+            folders_path.append(item_path)
+            print("item path is b: "+item_path)
+            #base_path.append(item_path)
+            directory_boolean.append("yes")
+        else:    
+            folders_path.append(item_path)
+            print("item path is c: "+item_path)
+            #folders_path.append(str(file)+"\\"+item_path)
+            directory_boolean.append("no")
+    return folders_path, directory_boolean
+
+
 def open_or_edit_file_view_list_folders(directory, file):
     folders_path = []
     directory_boolean = []
     for item in os.listdir(directory):
         item_path = os.path.join(directory, item)
-        print("item path is : "+item_path)
+        print("item path is b : "+item_path)
         if os.path.isdir(item_path):
             folders_path.append(item_path)
             print("item path is : "+item_path)
@@ -656,43 +733,49 @@ def get_client_ip(request):
 
 def upload_file(request):
     ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
-    update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
-    for row in update_cursor.fetchall():
-        username = row[0]
-    print(username)
-    file = request.FILES['file']
-    servername = request.POST['servername']
-    filename = None
-    subdirectory = generate_random_string()
-    print(settings.MEDIA_ROOT)
-    print(subdirectory)
-    server_file_path = os.path.join(settings.MEDIA_ROOT, subdirectory, servername)
-    backup_zip_path = os.path.join(settings.MEDIA_ROOT, subdirectory, 'backup')
-    os.makedirs(server_file_path, exist_ok=True)
-    os.makedirs(backup_zip_path, exist_ok=True)
-    fs = FileSystemStorage(location=backup_zip_path)
-    if file:
-        filename = file.name
-        if filename.__contains__(".zip"):
-           fs.save(file.name, file)
-           file_path = fs.path(file.name)
-           with zipfile.ZipFile(file_path, 'r') as zip_ref:
-               cursor = server_conn.cursor()
-               cursor.execute('''
-                INSERT INTO servers (file_name, server_name, server_id, owner)
-                VALUES (?, ?, ?, ?)
-            ''', (filename, servername, subdirectory, username))
-               server_conn.commit()
-               zip_ref.extractall(server_file_path)
-               print(filename)
-               return redirect('file_uploaded')
+    login_status = cache.get(ip+'_login_status')
+    print("login status is "+str(login_status))
+    if not login_status == "true":
+        return redirect('login')
+    else:
+        ip = get_client_ip(request)
+        update_cursor = account_conn.cursor()
+        update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+        for row in update_cursor.fetchall():
+            username = row[0]
+        print(username)
+        file = request.FILES['file']
+        servername = request.POST['servername']
+        filename = None
+        subdirectory = generate_random_string()
+        print(settings.MEDIA_ROOT)
+        print(subdirectory)
+        server_file_path = os.path.join(settings.MEDIA_ROOT, subdirectory, servername)
+        backup_zip_path = os.path.join(settings.MEDIA_ROOT, subdirectory, 'backup')
+        os.makedirs(server_file_path, exist_ok=True)
+        os.makedirs(backup_zip_path, exist_ok=True)
+        fs = FileSystemStorage(location=backup_zip_path)
+        if file:
+            filename = file.name
+            if filename.__contains__(".zip"):
+               fs.save(file.name, file)
+               file_path = fs.path(file.name)
+               with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                   cursor = server_conn.cursor()
+                   cursor.execute('''
+                    INSERT INTO servers (file_name, server_name, server_id, owner)
+                    VALUES (?, ?, ?, ?)
+                ''', (filename, servername, subdirectory, username))
+                   server_conn.commit()
+                   zip_ref.extractall(server_file_path)
+                   print(filename)
+                   return redirect('file_explorer')
 
           
+            else:
+              return HttpResponse('please upload a zip file')
         else:
-          return HttpResponse('please upload a zip file')
-    else:
-        return HttpResponse('Failed to upload file')
+            return HttpResponse('Failed to upload file')
     
 def start_or_close_server(request):
     exe_path = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90', 'server', 'PalServer.exe')
@@ -709,3 +792,11 @@ def get_client_ip(request):
         ip = request.META.get('REMOTE_ADDR')
     return ip
 
+def server_monitor(request):
+    ip = get_client_ip(request)
+    login_status = cache.get(ip+'_login_status')
+    print("login status is "+str(login_status))
+    if not login_status == "true":
+        return redirect('login')
+    else:
+        return render(request, 'server_monitor.html')

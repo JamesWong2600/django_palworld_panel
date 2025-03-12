@@ -26,6 +26,7 @@ from pywinauto.findwindows import find_windows
 from queue import Queue, Empty
 import psutil
 from django.http import JsonResponse
+from django.core.cache import cache
 
 conn = sqlite3.connect('setting_data.db', check_same_thread=False)
 server_conn = sqlite3.connect('servers.db', check_same_thread=False)
@@ -55,7 +56,13 @@ def get_exe(request):
     return exe_path
 
 def server_control(request):
-    return render(request, 'start_or_close_server.html',{'start_or_close': 'start', 'opened': 'server is closed'})
+    ip = get_client_ip(request)
+    login_status = cache.get(ip+'_login_status')
+    print("login status is "+str(login_status))
+    if not login_status == "true":
+        return redirect('login')
+    else:
+        return render(request, 'start_or_close_server.html',{'start_or_close': 'start', 'opened': 'server is closed'})
 
 def get_exe_core(request):
     ip = get_client_ip(request)
@@ -74,27 +81,33 @@ def get_exe_core(request):
 
 
 def execute_exe(request):
-    windows = gw.getWindowsWithTitle(get_exe_core(request))
-    print(windows)
+    ip = get_client_ip(request)
+    login_status = cache.get(ip+'_login_status')
+    print("login status is "+str(login_status))
+    if not login_status == "true":
+        return redirect('login')
+    else:
+       windows = gw.getWindowsWithTitle(get_exe_core(request))
+       print(windows)
     #windows = find_windows(title_re=".*PalServer.*")
-    if not windows:
-       cpu_usage = get_process_cpu_usage("PalServer-Win64-Shipping-Cmd.exe")
-       if cpu_usage is None:
-         cpu_usage = 0
-       ram_usage = get_process_ram_usage("PalServer-Win64-Shipping-Cmd.exe")
-       if ram_usage is None:
-         ram_usage = 0    
-       total_ram = get_total_ram_size()
-       print("cpu= "+ str(cpu_usage))
-       thread = threading.Thread(target=open_server, args=(request,))
-       thread.start()
-       thread.join()
-       return render(request, 'start_or_close_server.html', {'start_or_close': 'close', 'opened': "server is opened", 'cpu_usage': str(cpu_usage), 'ram_usage': str(ram_usage), 'total_ram': str(total_ram)})
-    if windows:
-       thread = threading.Thread(target=close_server)
-       thread.start()
-       thread.join()
-       return render(request, 'start_or_close_server.html', {'start_or_close': 'start', 'opened': 'server is closed'})
+       if not windows:
+          cpu_usage = get_process_cpu_usage("PalServer-Win64-Shipping-Cmd.exe")
+          if cpu_usage is None:
+            cpu_usage = 0
+          ram_usage = get_process_ram_usage("PalServer-Win64-Shipping-Cmd.exe")
+          if ram_usage is None:
+            ram_usage = 0    
+          total_ram = get_total_ram_size()
+          print("cpu= "+ str(cpu_usage))
+          thread = threading.Thread(target=open_server, args=(request,))
+          thread.start()
+          thread.join()
+          return render(request, 'start_or_close_server.html', {'start_or_close': 'close', 'opened': "server is opened", 'cpu_usage': str(cpu_usage), 'ram_usage': str(ram_usage), 'total_ram': str(total_ram)})
+       if windows:
+          thread = threading.Thread(target=close_server)
+          thread.start()
+          thread.join()
+          return render(request, 'start_or_close_server.html', {'start_or_close': 'start', 'opened': 'server is closed'})
     #thread = threading.Thread(subprocess_run(request))
     #=thread2 = threading.Thread(get_windows(request))
     #thread.start()

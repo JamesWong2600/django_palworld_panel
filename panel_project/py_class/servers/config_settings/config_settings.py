@@ -65,27 +65,35 @@ def change_server_settings(request):
         print("tov")   
         for rowrow in server_cursor.fetchall():
             server_id = rowrow[0]
-            servername = rowrow[1]
-        print("tov")    
+            servername = rowrow[1]  
         names = json.loads(request.POST.get('names', '[]'))
         values = json.loads(request.POST.get('values', '[]'))
         set = zip(names, values)
         print("set is "+str(set))
-        names = []
+        #names = []
+        #values = []
+        settings_parts = []
         cache.set(ip+'_palworld_settings_cahce', set)
         setting_cache = cache.get(ip+'_palworld_settings_cahce')
         for selection in setting_cache:
-            print("changed selection is "+str(selection))
-            if '=' in selection:
-               name, value = selection.split('=', 1)
-               names.append(name.strip())
-               values.append(value.strip())
-        combined_list = zip(names, values)
+            selection = str(selection).replace("'", "")
+            selection = selection.replace("(", "")
+            selection = selection.replace(")", "")
+            print("selection now is "+str(selection))
+            name, value = str(selection).split(',', 1)
+            settings_parts.append(f"{name.strip()}={value.strip()}")
+            #names.append(name.strip())
+            #values.append(value.strip())
+        """combined_list = zip(names, values)
         all = str(combined_list).replace("', '","=")
+        print("all is "+str(all))
         all = all.replace("('", "")
         all = all.replace("')", "")
         all = all.replace("[", "OptionSettings=(")
         all = all.replace("]", ")")
+        print("all is "+str(all))"""
+        settings_string = f"OptionSettings=({','.join(settings_parts)})"
+        print(f"Final settings: {settings_string}")
         new_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer','PalWorldSettings.txt')
         delete_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer','PalWorldSettings.ini')
         delete_file_path2 = os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer','PalWorldSettings.txt')
@@ -94,10 +102,12 @@ def change_server_settings(request):
         if os.path.exists(delete_file_path2):
           os.remove(delete_file_path) 
         create_new_file(new_file_path, '')
-        write_string_to_second_line(os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer', 'PalWorldSettings.txt'), all)
+        write_string_to_second_line(os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer', 'PalWorldSettings.txt'), settings_string)
+        #write_string_to_second_line(os.path.join(settings.MEDIA_ROOT, server_id, servername, 'DefaultPalWorldSettings.ini'), settings_string)
         old_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer', 'PalWorldSettings.txt')
         new_file_name = 'PalWorldSettings.ini'
         write_string_to_first_line(os.path.join(settings.MEDIA_ROOT,server_id, servername,'Pal','Saved','Config','WindowsServer', 'PalWorldSettings.txt'), '[/Script/Pal.PalGameWorldSettings]')
+        #write_string_to_first_line(os.path.join(settings.MEDIA_ROOT,server_id, servername,'DefaultPalWorldSettings.ini'), '[/Script/Pal.PalGameWorldSettings]')
         rename_file(old_file_path, new_file_name)
         return JsonResponse({'message': 'Settings updated successfully'})#print(all)
         #return render(request, 'server_setting.html', {'combined_list': combined_list})
@@ -309,10 +319,13 @@ def server_settings(request):
             servername = rowrow[1]
         file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, 'DefaultPalWorldSettings.ini')
         #print(file_path)
-        config_text = read_all_text(file_path)
         original_setting = read_all_text_from_settings(os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer','PalWorldSettings.ini'))
-        print(original_setting)
-        if original_setting == '':
+        print("original_setting_is:"+str(original_setting))
+        if original_setting is None or not str(original_setting).strip():
+            config_text = read_all_text(file_path)
+            print("original_setting is empty")
+            input_text = config_text.replace('[/Script/Pal.PalGameWorldSettings]','')
+            print("input_text is "+input_text)
             new_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer','PalWorldSettings.txt')
             delete_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer','PalWorldSettings.ini')
             delete_file_path2 = os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer','PalWorldSettings.txt')
@@ -321,13 +334,14 @@ def server_settings(request):
             if os.path.exists(delete_file_path2):
               os.remove(delete_file_path) 
             create_new_file(new_file_path, '')
-            write_string_to_second_line(os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer', 'PalWorldSettings.txt'), config_text)
+            write_string_to_second_line(os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer', 'PalWorldSettings.txt'), input_text)
             old_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername,'Pal','Saved','Config','WindowsServer', 'PalWorldSettings.txt')
             new_file_name = 'PalWorldSettings.ini'
             write_string_to_first_line(os.path.join(settings.MEDIA_ROOT,server_id, servername,'Pal','Saved','Config','WindowsServer', 'PalWorldSettings.txt'), '[/Script/Pal.PalGameWorldSettings]')
             rename_file(old_file_path, new_file_name)
-        #config_text = config_text.replace("""; This configuration file is a sample of the default server settings.\n; Changes to this file will NOT be reflected on the server.\n; To change the server settings', 'modify Pal/Saved/Config/WindowsServer/PalWorldSettings.ini.\n\n""",'')
-        #config_text = config_text.replace("[/Script/Pal.PalGameWorldSettings]",'')
+        else:
+            config_text = original_setting
+        config_text = config_text.replace('[/Script/Pal.PalGameWorldSettings]','')
         config_text = config_text.replace("OptionSettings=(",'')
         config_text = config_text.replace(")",'')
         config_list = [item.strip() for item in config_text.split(',')]
@@ -338,18 +352,23 @@ def server_settings(request):
         combined_list = []
         setting_cache = cache.get(ip+'_palworld_settings_cahce')
         for selection in setting_cache:
-            print("selection is "+selection)
+            print("selection is aaa"+selection)
             if '=' in selection:
-               name, value = selection.split('=', 1)
-               names.append(name.strip())
-               values.append(value.strip())
+                name, value = selection.split('=', 1)
+                names.append(name.strip())
+                values.append(value.strip())
         combined_list = zip(names, values)
         return render(request, 'server_setting.html', {'combined_list': combined_list})    
 
           
 def read_all_text(file_path):
+    #with open(file_path, 'r', encoding='utf-8') as file:
+    # Preserve all formatting including whitespace and newlines
+       # content = file.read()
+        #return content
     with open(file_path, 'r') as file:
         content_from_fifth = ''.join(islice(file, 4, None))
+        print("content_from_fifth is "+content_from_fifth)
         return content_from_fifth
         #return file.read()
 

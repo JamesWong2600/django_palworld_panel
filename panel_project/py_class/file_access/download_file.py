@@ -19,7 +19,8 @@ conn = sqlite3.connect('setting_data.db', check_same_thread=False)
 server_conn = sqlite3.connect('servers.db', check_same_thread=False)
 account_conn = sqlite3.connect('account.db', check_same_thread=False)
 
-
+# get the client ip address
+# 獲取用戶端IP地址
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
@@ -29,22 +30,21 @@ def get_client_ip(request):
     return ip
 
 
+# users can download the files from the file explorer
+# 用戶可以下載文件
 def download_file_view(request):
     file_name = request.POST['file']
-    print("downloaded " +file_name)
     ip = get_client_ip(request)
     update_cursor = account_conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
     for row in update_cursor.fetchall():
         username = row[0]
-    print(username+ " name")
     server_cursor = server_conn.cursor()
     server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
     for rowrow in server_cursor.fetchall():
         server_id = rowrow[0]
         servername = rowrow[1]
     file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, file_name)
-    print(file_name+ " file name")
     try:
         if os.path.isdir(file_path):
             # Create a zip file of the folder
@@ -59,7 +59,9 @@ def download_file_view(request):
         raise Http404("File not found")
     except PermissionError:
         return HttpResponse("Permission denied", status=403)
-    
+
+#the zip file will be created in memory
+#zip文件將在內存中創建
 def create_zip_in_memory(directory_path):
     # Create BytesIO object
     in_memory_zip = BytesIO()

@@ -77,7 +77,7 @@ def authentication(request):
 
 def file_acesss(request, file_name):
     edit_file_view(request)
-    save_edit(request)
+    #save_edit(request)
     delete_file_view(request)
     download_file_view(request)
     rename_file_view(request, file_name)
@@ -169,7 +169,15 @@ def download_backup(request):
     print("yes nice")
     if os.path.exists(file_path):
         print("yes nice")
-        return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=os.path.basename(file_path))
+        #backup_page
+        #return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=os.path.basename(file_path))
+        response = FileResponse(
+            open(file_path, 'rb'),
+            as_attachment=True,
+            filename=os.path.basename(file_path)
+        )
+        response['X-Redirect-After'] = '/backup_page'  # Add custom header for redirect
+        return response
     
 
 
@@ -295,15 +303,19 @@ def list_folders(directory, file):
         return directory, "no"
 
 
+#to generate a random string
+#生成隨機字符串
 def generate_random_string(length=12):
     letters = string.ascii_letters + string.digits
     return ''.join(random.choice(letters) for i in range(length))
 
+#to make the users able go to the login page
+#使用者可以到登入頁面
 def login_view(request):
-    cache.set('key', 'value112233')
-    print(cache.get('key'))
     return render(request, 'login.html')
 
+#to make the users able go to the register page
+#使用者可以到注冊頁面
 def register_view(request):
     return render(request, 'register.html')
 
@@ -722,7 +734,8 @@ def file_uploaded(request, file1):
 
 
 
-    
+#to get users' ip address
+#取得使用者的ip地址    
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
@@ -731,6 +744,8 @@ def get_client_ip(request):
         ip = request.META.get('REMOTE_ADDR')
     return ip
 
+#to make the users able to upload files
+#使用者可以上傳檔案
 def upload_file(request):
     ip = get_client_ip(request)
     login_status = cache.get(ip+'_login_status')

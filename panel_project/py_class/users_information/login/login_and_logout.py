@@ -46,6 +46,6 @@ def login_account(request):
         error = 'username or password is incorrect'
         return render(request, 'login.html', {'error': error})
     else:
-        cache.set(ip+'_login_status', "true")
+        cache.set(ip+'_login_status', "true",timeout=1800)
         print(cache.get(ip+'_login_status'))
         return redirect('main')

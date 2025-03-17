@@ -299,6 +299,8 @@ def server_settings_notused(request):
         #print(str(values))
         return render(request, 'server_setting.html', {'combined_list': combined_list})
     
+#users can access the server settings page
+#用戶可以訪問伺服器設置頁面
 def server_settings(request):
     ip = get_client_ip(request)
     login_status = cache.get(ip+'_login_status')

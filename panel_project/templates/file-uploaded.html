@@ -7,12 +7,12 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/horizontal_bar.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/rename_form.css' %}">
     <script>
-        function openEditWindow(fileName) {
+        /*function openEditWindow(fileName) {
             window.open('/edit/' + fileName, 'Edit File', 'width=1200,height=500');
         }
         function openRenameWindow(fileName) {
             window.open('/rename_file/' + fileName, 'Rename File', 'width=800,height=400');
-        }
+        }*/
         function rename_file(index) {
         // Get input from prompt
         let new_name = prompt("Enter new name:", "");
@@ -50,8 +50,6 @@
             });
         }
     }
-            
-
     </script>
 </head>
 <body>

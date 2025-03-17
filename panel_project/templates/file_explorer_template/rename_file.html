@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rename File</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/container.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>Rename File: {{ file_name }}</h1>
+        <form action="{% url 'rename_file' file %}" method="post">
+            {% csrf_token %}
+            <input type="text" name="new_name" placeholder="New file name">
+            <br>
+            <button type="submit">Rename</button>
+        </form>
+    </div>
+</body>
+</html>

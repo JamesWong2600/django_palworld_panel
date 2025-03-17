@@ -1,6 +1,14 @@
 <html>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/horizontal_bar.css' %}">
+    <style>
+         p {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
     <body>
         <nav>
             <ul class="navbar">
@@ -12,6 +20,6 @@
                 <li class="logout"><a href="{% url 'logout' %}">Logout</a></li>
             </ul>
         </nav>
+        <p>coming soon</p>
     </body>
-    <h1>coming soon</h1>
 </html>

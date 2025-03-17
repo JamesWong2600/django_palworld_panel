@@ -32,6 +32,8 @@ conn = sqlite3.connect('setting_data.db', check_same_thread=False)
 server_conn = sqlite3.connect('servers.db', check_same_thread=False)
 account_conn = sqlite3.connect('account.db', check_same_thread=False)
 
+# get the client ip address
+# 獲取用戶端IP地址
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
@@ -40,6 +42,8 @@ def get_client_ip(request):
         ip = request.META.get('REMOTE_ADDR')
     return ip
 
+# get the exe path
+# 獲取exe路徑
 def get_exe(request):
     ip = get_client_ip(request)
     update_cursor = account_conn.cursor()
@@ -55,6 +59,8 @@ def get_exe(request):
     #print("my_path is "+ exe_path)
     return exe_path
 
+# users can access the server control page
+# 用戶可以訪問伺服器控制頁面
 def server_control(request):
     ip = get_client_ip(request)
     login_status = cache.get(ip+'_login_status')
@@ -64,6 +70,8 @@ def server_control(request):
     else:
         return render(request, 'start_or_close_server.html',{'start_or_close': 'start', 'opened': 'server is closed'})
 
+# get the exe core path
+# 獲取exe核心路徑
 def get_exe_core(request):
     ip = get_client_ip(request)
     update_cursor = account_conn.cursor()
@@ -79,7 +87,8 @@ def get_exe_core(request):
     #print(exe_path_core)
     return exe_path_core
 
-
+# users can execute the server
+# 用戶可以執行伺服器
 def execute_exe(request):
     ip = get_client_ip(request)
     login_status = cache.get(ip+'_login_status')
@@ -108,14 +117,9 @@ def execute_exe(request):
           thread.start()
           thread.join()
           return render(request, 'start_or_close_server.html', {'start_or_close': 'start', 'opened': 'server is closed'})
-    #thread = threading.Thread(subprocess_run(request))
-    #=thread2 = threading.Thread(get_windows(request))
-    #thread.start()
-    #thread2.start()
-    #image_path = os.path.join('C:\web-project\django_palworld_panel\panel_project', 'cmd_window_capture.png')
-    #thread.join()
-    #print(str(image_path))
-    #return render(request, 'start_or_close_server.html', {'open': "server is opened"})
+    
+# get the server usage
+# 獲取伺服器使用率
 def get_usage(request):
     cpu_usage = get_process_cpu_usage("PalServer-Win64-Shipping-Cmd.exe")
     if cpu_usage is None:
@@ -131,7 +135,9 @@ def get_usage(request):
         return JsonResponse({'start_or_close': 'start', 'opened': "server is closed"})
     if windows:
         return JsonResponse({'start_or_close': 'close', 'opened': "server is opened", 'cpu_usage': str(cpu_usage), 'ram_usage': str(ram_usage), 'total_ram': str(total_ram)})
-    
+
+#get ram usage
+#獲取RAM使用率
 def get_process_ram_usage(process_name):
     for proc in psutil.process_iter(['pid', 'name']):
         if proc.info['name'] == process_name:
@@ -139,7 +145,8 @@ def get_process_ram_usage(process_name):
             return round(process.memory_info().rss / (1024 * 1024), 2) 
     return None
 
-
+#get cpu usage
+#獲取CPU使用率
 def get_process_cpu_usage(process_name):
     for proc in psutil.process_iter(['pid', 'name']):
         if proc.info['name'] == process_name:
@@ -147,11 +154,14 @@ def get_process_cpu_usage(process_name):
             return process.cpu_percent(interval=1)
     return None
 
-
+# get the total ram size
+# 獲取總RAM大小
 def get_total_ram_size():
     mem = psutil.virtual_memory()
     return round(mem.total / (1024 * 1024), 2) 
 
+# open the server
+# 開啟伺服器
 def open_server(request):
     windows = get_exe(request)
     process = subprocess.Popen(
@@ -162,9 +172,7 @@ def open_server(request):
     )
     
             
+# close the server
+# 關閉伺服器
 def close_server():
     os.system(r"taskkill /im PalServer-Win64-Shipping-Cmd.exe /f")
-    #return render(request, 'start_or_close_server.html')
-    #os.system(r"taskkill /im C:\project\django_palworld_panel\panel_project\uploads\yOCn2OfYILkQ\kfc\Pal\Binaries\Win64\PalServer-Win64-Shipping-Cmd.exe")  
-    #app = Application().connect(window_title=r"C:\\project\\django_palworld_panel\\panel_project\\uploads\\yOCn2OfYILkQ\\kfc\\PalServer.exe")
-    #app.kill()    

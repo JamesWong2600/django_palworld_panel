@@ -1,7 +1,7 @@
 import sqlite3
 
 
-def check_server():
+"""def check_server():
     user_account_conn = sqlite3.connect('servers.db', check_same_thread=False)
     cursor = user_account_conn.cursor()
     cursor.execute(f'''
@@ -12,4 +12,4 @@ def check_server():
     file_name TEXT NOT NULL,           
     owner TEXT              
     )
-    ''')
+    ''')"""

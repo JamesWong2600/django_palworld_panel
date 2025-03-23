@@ -18,6 +18,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 BASED_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PARENT_DIR = os.path.dirname(BASED_DIR)
 UPLOADS_DIR = os.path.join(PARENT_DIR, 'uploads')
+DATABASES_DIR = os.path.join(PARENT_DIR, 'database')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -28,11 +29,13 @@ SECRET_KEY = 'django-insecure-*j!bm)rm)bdv49k=mcq7v^&ee+$q011c9x8615#n9m76(a+y29
 DEBUG = True
 
 os.makedirs(UPLOADS_DIR, exist_ok=True)
+os.makedirs(DATABASES_DIR, exist_ok=True)
 
 ALLOWED_HOSTS = ['*']
 
 CONFIG = BASE_DIR / 'config'
 MEDIA_ROOT = UPLOADS_DIR
+DATABASES_ROOT = DATABASES_DIR
 #MEDIA_ROOT = BASE_DIR / 'uploads'
 MEDIA_URL = '/uploads/'
 # Application definition

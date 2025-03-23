@@ -10,9 +10,7 @@ import time
 from django.core.cache import cache
 from itertools import islice
 
-conn = sqlite3.connect('setting_data.db', check_same_thread=False)
-server_conn = sqlite3.connect('servers.db', check_same_thread=False)
-account_conn = sqlite3.connect('account.db', check_same_thread=False)
+conn = sqlite3.connect(os.path.join(settings.DATABASES_ROOT, 'server_data.db'), check_same_thread=False)
 
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -55,12 +53,12 @@ def change_server_settings(request):
     if not login_status == "true":
         return redirect('login')
     else:
-        update_cursor = account_conn.cursor()
+        update_cursor = conn.cursor()
         update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
         for row in update_cursor.fetchall():
             username = row[0]
         print(username+ " bname")
-        server_cursor = server_conn.cursor()
+        server_cursor = conn.cursor()
         server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
         print("tov")   
         for rowrow in server_cursor.fetchall():
@@ -119,12 +117,12 @@ def change_server_settings_unused(request):
     if not login_status == "true":
         return redirect('login')
     else:
-        update_cursor = account_conn.cursor()
+        update_cursor = conn.cursor()
         update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
         for row in update_cursor.fetchall():
             username = row[0]
         print(username+ " bname")
-        server_cursor = server_conn.cursor()
+        server_cursor = conn.cursor()
         server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
         print("tov")   
         for rowrow in server_cursor.fetchall():
@@ -229,13 +227,13 @@ def server_settings_notused(request):
     if not login_status == "true":
         return redirect('login')
     else:
-        update_cursor = account_conn.cursor()
+        update_cursor = conn.cursor()
         update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
         for row in update_cursor.fetchall():
             username = row[0]
         print(username+ " dname")
         time.sleep(1)
-        server_cursor = server_conn.cursor()
+        server_cursor = conn.cursor()
         server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
         for rowrow in server_cursor.fetchall():
             server_id = rowrow[0]
@@ -308,13 +306,13 @@ def server_settings(request):
     if not login_status == "true":
         return redirect('login')
     else:
-        update_cursor = account_conn.cursor()
+        update_cursor = conn.cursor()
         update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
         for row in update_cursor.fetchall():
             username = row[0]
         print(username+ " dname")
         time.sleep(1)
-        server_cursor = server_conn.cursor()
+        server_cursor = conn.cursor()
         server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
         for rowrow in server_cursor.fetchall():
             server_id = rowrow[0]

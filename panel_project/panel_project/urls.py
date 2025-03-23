@@ -1,10 +1,10 @@
 from django.contrib import admin
 from django.urls import path, re_path
-from panel_app.views import upload_file, login_view, register_view, register, main_page, file_uploaded, edit_file_view
-from panel_app.views import delete_file_view, download_file_view, rename_file_view, start_or_close_server, server_control, execute_exe, server_settings
+from panel_app.views import upload_file, login_view, register_view, register, main_page, edit_file_view
+from panel_app.views import delete_file_view, download_file_view, rename_file_view, server_control, execute_exe, server_settings
 from panel_app.views import change_server_settings, login_view, login_account, logout, file_uploaded_rename, send_rename
 from panel_app.views import edit_file_view, open_server, close_server, get_usage, backup_page, backup_action, download_backup
-from panel_app.views import file_uploaded_with_parameter, open_or_edit_file_view_base, file_uploaded_base
+from panel_app.views import open_or_edit_file_view_base, upload_file_in_explorer
 from panel_app.views import file_explorer_view, rename_file_backend, server_monitor
 """save_edit,"""
 urlpatterns = [
@@ -51,4 +51,5 @@ urlpatterns = [
     path('file_explorer/', file_explorer_view, name='file_explorer'), #1
     path('rename_file_backend/',rename_file_backend, name='rename_file_backend'),#4
     path('server_monitor/', server_monitor, name='server_monitor'),
+    path('upload_file_in_explorer/', upload_file_in_explorer, name='upload_file_in_explorer'), #upload_file_in_explorer
 ]

@@ -2,7 +2,7 @@ import sqlite3
 
 
 
-def account():
+"""def account():
     user_account_conn = sqlite3.connect('account.db', check_same_thread=False)
     cursor = user_account_conn.cursor()
     cursor.execute(f'''
@@ -14,4 +14,4 @@ def account():
     ip_address TEXT NOT NULL,
     login_status TEXT NOT NULL             
     )
-    ''')
+    ''')"""

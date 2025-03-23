@@ -20,8 +20,6 @@ from py_class.file_option import  edit_file, delete_file, rename_file
 from py_class.start_or_close_server import execute_exe
 from py_class.read_palworld_config.get_config import get_config_data, read_all_text
 from configparser import ConfigParser
-from py_class.servers.check_server import check_server
-from py_class.users_information.account import account
 from py_class.servers.config_settings.config_settings import *
 from py_class.users_information.register.register import register
 from py_class.users_information.login.login_and_logout import login_account, logout
@@ -50,10 +48,6 @@ from py_class.backup.backup_sql_initial import *
 from datetime import datetime
 from django_redis import get_redis_connection
 from django.core.cache import cache
-
-
-account()
-check_server()
 
 def update_settings(request, file_path, section, value, new_name, content):
     edit_file(file_path, new_content=None)
@@ -97,13 +91,13 @@ def server_controller(request, process_name):
     close_server()
     get_exe_core(request)
       
-servers_backup_create_table()
 
 
-conn = sqlite3.connect('setting_data.db', check_same_thread=False)
-server_conn = sqlite3.connect('servers.db', check_same_thread=False)
-account_conn = sqlite3.connect('account.db', check_same_thread=False)
-servers_backup = sqlite3.connect('servers_backup.db', check_same_thread=False)
+conn = sqlite3.connect(os.path.join(settings.DATABASES_ROOT, 'server_data.db'), check_same_thread=False)
+#conn = sqlite3.connect('setting_data.db', check_same_thread=False)
+#server_conn = sqlite3.connect('servers.db', check_same_thread=False)
+#account_conn = sqlite3.connect('account.db', check_same_thread=False)
+#servers_backup = sqlite3.connect('servers_backup.db', check_same_thread=False)
 
 class DjangoCache:
     def set_value(self, key: str, value: any, timeout=None):
@@ -130,9 +124,12 @@ class DjangoCache:
     def delete_list(self, key: str) -> bool:
         return cache.delete(key)
 
+
+#to download the backup file
+#下載備份文件
 def download_backup(request):
     ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
+    update_cursor = conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
     for row in update_cursor.fetchall():
         username = row[0]
@@ -142,7 +139,7 @@ def download_backup(request):
     #for rowrow in server_cursor.fetchall():
     #    server_id = rowrow[0]
     #    servername = rowrow[1]
-    backup_cursorr = servers_backup.cursor()  
+    backup_cursorr = conn.cursor()  
     backup_cursorr.execute(f"SELECT server_id, server_name, time_created FROM servers_backup where username = '{username}'")
     server_id_list = []
     server_name_list = []
@@ -184,25 +181,27 @@ def download_backup(request):
 
 
 
-
+#to make a backup for the server folders
+#備份伺服器資料夾
 def backup_action(request):
     ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
+    update_cursor = conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
     for row in update_cursor.fetchall():
         username = row[0]
     print(username+ " name")
-    server_cursor = server_conn.cursor()
+    server_cursor = conn.cursor()
     server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
+    #conn.commit()
     for rowrow in server_cursor.fetchall():
         server_id = rowrow[0]
         servername = rowrow[1]
     current_time = datetime.now()
     formatted_time = current_time.strftime("%Y_%m_%d__%H_%M_%S")
-    backup_cursorr = servers_backup.cursor()  
+    backup_cursorr = conn.cursor()  
     backup_cursorr.execute('''INSERT INTO servers_backup (username, server_id, server_name, time_created) VALUES (?, ?, ?, ?)''', (username, server_id, servername, formatted_time))
-    servers_backup.commit()
-    backup_cursorr = servers_backup.cursor()  
+    conn.commit()
+    backup_cursorr = conn.cursor()  
     backup_cursorr.execute(f"SELECT server_id, server_name, time_created FROM servers_backup where username = '{username}'")
     server_id_list = []
     server_name_list = []
@@ -235,7 +234,7 @@ def make_zip_of_directory(directory_path, output_zip_path):
 
 def backup_page(request):
     ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
+    update_cursor = conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
     for row in update_cursor.fetchall():
         username = row[0]
@@ -245,7 +244,7 @@ def backup_page(request):
     #for rowrow in server_cursor.fetchall():
         #server_id = rowrow[0]
         #servername = rowrow[1]
-    backup_cursorr = servers_backup.cursor()
+    backup_cursorr = conn.cursor()
     backup_cursorr.execute(f"SELECT server_id, server_name, time_created FROM servers_backup where username = '{username}'")
     server_id_list = []
     server_name_list = []
@@ -297,7 +296,11 @@ def list_folders(directory, file):
                     print("item path is : "+item_path)
                 else:
                     folders_path.append(str(file)+"\\"+item_path)
-                directory_boolean.append("no")
+                if item_path.endswith('.zip'):
+                    directory_boolean.append("zip")
+                else:
+                    directory_boolean.append("no")
+                #directory_boolean.append("no")
         return folders_path, directory_boolean, #base_path
     else:
         return directory, "no"
@@ -312,6 +315,36 @@ def generate_random_string(length=12):
 #to make the users able go to the login page
 #使用者可以到登入頁面
 def login_view(request):
+    cursor = conn.cursor()
+    cursor.execute(f'''
+    CREATE TABLE IF NOT EXISTS accounts(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    ip_address TEXT NOT NULL,
+    login_status TEXT NOT NULL             
+    )
+    ''')
+    cursor = conn.cursor()
+    cursor.execute(f'''
+    CREATE TABLE IF NOT EXISTS servers(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id TEXT NOT NULL UNIQUE,
+    server_name TEXT NOT NULL,    
+    file_name TEXT NOT NULL,           
+    owner TEXT              
+    )
+    ''')
+    server_backup_create_table_cursor = conn.cursor()
+    server_backup_create_table_cursor.execute(f'''
+    CREATE TABLE IF NOT EXISTS servers_backup(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    server_id TEXT NOT NULL,
+    server_name TEXT NOT NULL,
+    time_created TEXT NOT NULL     
+    )''')
     return render(request, 'login.html')
 
 #to make the users able go to the register page
@@ -325,9 +358,9 @@ def main_page(request):
     if not login_status == "true":
         return redirect('login')
     else:
-        user_cursor = account_conn.cursor()
+        user_cursor = conn.cursor()
         print(ip)
-        server_cursor = server_conn.cursor()
+        server_cursor = conn.cursor()
         user_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
         for row in user_cursor.fetchall():
             username = row[0]
@@ -340,10 +373,7 @@ def main_page(request):
         else:
             return render(request, 'main.html',{'server': server, 'username': username})
 
-"{% url 'file_uploaded_with_parameter' parameter=file %}"
-"{% url 'file_uploaded_with_parameter' parameter=file %}"
-"{% url 'upload_file'  %}"
-def file_uploaded_with_parameter(request):
+"""def file_uploaded_with_parameter(request):
     #print("the args is "+args)
     current_url = request.build_absolute_uri()
     current_url = current_url.split('http://127.0.0.1:8000/',1)[1]
@@ -355,12 +385,12 @@ def file_uploaded_with_parameter(request):
     slash_count = current_url.count('/')
     #print("arg is " +str(args))
     ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
+    update_cursor = conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
     for row in update_cursor.fetchall():
         username = row[0]
     print(username+ " name")
-    server_cursor = server_conn.cursor()
+    server_cursor = conn.cursor()
     server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
     for rowrow in server_cursor.fetchall():
         server_id = rowrow[0]
@@ -396,18 +426,20 @@ def file_uploaded_with_parameter(request):
     #    substring = str(previous_url).split('/edit_file_view/')[1]
     #elif 'edit_file_view/' in previous_url:
     #    substring = f"engine\\{file_name}"
-    #print(substring)    
+    #print(substring)"""
 
 
 
-def append_to_url(request, *args):
+"""def append_to_url(request, *args):
     new_segment = request.GET.get('new_segment')
     if new_segment:
         new_url = "/file-uploaded/" + "/".join(args) + f"/{new_segment}/"
         return redirect(new_url)
     else:
-        return HttpResponse("New segment not provided")
+        return HttpResponse("New segment not provided")"""
     
+#users will be able to go to the file explorer page
+#使用者可以到檔案瀏覽器頁面
 def file_explorer_view(request):
     ip = get_client_ip(request)
     login_status = cache.get(ip+'_login_status')
@@ -421,10 +453,10 @@ def file_explorer_view(request):
         #if not file == None:
             #cache_service.set_value(ip, file)   
         #print("Cached value is:", cached_value)
-        update_cursor = account_conn.cursor()
+        update_cursor = conn.cursor()
         update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
         username = update_cursor.fetchone()[0]
-        server_cursor = server_conn.cursor()
+        server_cursor = conn.cursor()
         server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
         server_id, servername = server_cursor.fetchone()
         directory = os.path.join(settings.MEDIA_ROOT, server_id, servername, str(file))
@@ -443,12 +475,13 @@ def file_explorer_view(request):
             cache_service.delete_list(ip)
             print("cache_paths is:", folder_paths)
         files = zip(folder_paths , folder_names, folder_paths, folder_types, directory_boolean)
-        return render(request, 'file-uploaded.html', {'files': files})  
+        return render(request, 'file-uploaded.html', {'files': files, 'server_id_string': os.path.join(settings.MEDIA_ROOT, server_id, servername)})  
     
 
     
 
-
+#user will be able to open or edit the file
+#使用者可以打開或編輯檔案
 def open_or_edit_file_view_base(request):
     ip = get_client_ip(request)
     login_status = cache.get(ip+'_login_status')
@@ -472,13 +505,21 @@ def open_or_edit_file_view_base(request):
         print("basefile is "+str(base_file))
         #action = request.POST.get('action')
         print("file ares "+str(file))
-        update_cursor = account_conn.cursor()
+        update_cursor = conn.cursor()
         update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
         username = update_cursor.fetchone()[0]
-        server_cursor = server_conn.cursor()
+        server_cursor = conn.cursor()
         server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
         server_id, servername = server_cursor.fetchone()
         directory = os.path.join(file)
+        server_file_path = os.path.join(settings.MEDIA_ROOT, server_id, servername, str(file))
+        if base_file.endswith('.zip'):
+            print("server_file_path is "+server_file_path) 
+            with zipfile.ZipFile(server_file_path, 'r') as zip_ref:
+                print("server_file_path is "+server_file_path.replace(f"\\{base_file}", "")) 
+                zip_ref.extractall(server_file_path.replace(f"\\{base_file}", ""))
+                #print("server_file_path")    
+                return redirect('file_explorer')
         if action == 0:
                 if os.path.isdir(directory):
                     folders, directory_boolean = open_or_edit_file_view_list_folders(file, base_file)
@@ -493,21 +534,15 @@ def open_or_edit_file_view_base(request):
                     print("folder_paths is:", folder_paths)
                     cache_service.set_list(ip, folder_paths)
                     folder_paths = cache_service.get_list(ip)
-                    print("aaaaaaaaaaaaaaaaaaaaaaaaaaaa"+str(folder_paths))
                     files = zip(folder_paths, folder_names, folder_paths, folder_types, directory_boolean)
                     if os.path.isdir(directory):
                         return render(request, 'file-uploaded.html', {'files': files})  
-                    """ return render(request, 'file-uploaded.html', {
-                        'files': files,
-                        'redirect_url': 'file_explorer'
-                    }) """
-
                 else:
                     content = read_all_text(directory)
                     return render(request, 'edit_file_view.html', {'file_name': file, 'content': content, 'base_name': base_file})
         else:
             content = rf"{request.POST.get('content')}"
-            print("content is "+str(content))
+            #print("content is "+str(content))
             processed_content = remove_empty_lines(content)
             if not file.endswith('.txt'):
                 new_file_name = file + '.txt'
@@ -517,14 +552,13 @@ def open_or_edit_file_view_base(request):
                 os.rename(old_file_path, new_file_name)
                 with open(new_file_name, 'w') as filess:
                     filess.write(processed_content) 
-                    print("weittedddddddddddddddddddddddddddddd")
                 with open(new_file_name, 'r') as filess:
                     print(filess.read())
-                os.rename(new_file_name, old_file_path)    
+                os.rename(new_file_name, old_file_path)     
             else:
-                with open(new_file_name, 'w') as filess:
+                with open(file, 'w') as filess:
                     filess.write(processed_content)
-                with open(new_file_name, 'r') as filess:
+                with open(file, 'r') as filess:
                     print(filess.read())  
             gfolders, gdirectory_boolean = edit_return_list_folders(file, base_file)
             gfolders2 = [fold.replace(directory+"\\", '') for fold in gfolders]
@@ -538,10 +572,12 @@ def open_or_edit_file_view_base(request):
             #print("folder_paths is:", folder_paths)
             #cache_service.set_list(ip, folder_paths)
             #folder_paths = cache_service.get_list(ip)
-            print("aaaaaaaaaaaaaaaaaaaaaaaaaaaa"+str(gfolder_paths))
+            #print("aaaaaaaaaaaaaaaaaaaaaaaaaaaa"+str(gfolder_paths))
             gfiles = zip(gfolder_paths, gfolder_names, gfolder_paths, gfolder_types, gdirectory_boolean)
             return render(request, 'file-uploaded.html', {'files': gfiles})  
         
+# remove the irrelevant part from the config file
+#移除配置文件中不相關的部分
 def remove_empty_lines(text):
     # Split text into lines and filter out empty lines while preserving indentation
     lines = text.splitlines()
@@ -550,6 +586,8 @@ def remove_empty_lines(text):
     return '\n'.join(non_empty_lines)       
    
 
+# return the list of folders after edited the file
+#返回編輯檔案後的資料夾列表
 def edit_return_list_folders(directory, file):
     folders_path = []
     directory_boolean = []
@@ -566,11 +604,14 @@ def edit_return_list_folders(directory, file):
         else:    
             folders_path.append(item_path)
             print("item path is c: "+item_path)
-            #folders_path.append(str(file)+"\\"+item_path)
-            directory_boolean.append("no")
+            if item_path.endswith('.zip'):
+               directory_boolean.append("zip")
+            else:
+               directory_boolean.append("no")
     return folders_path, directory_boolean
 
-
+# return the list of folders after opened the file
+#返回打開檔案後的資料夾列表
 def open_or_edit_file_view_list_folders(directory, file):
     folders_path = []
     directory_boolean = []
@@ -586,7 +627,10 @@ def open_or_edit_file_view_list_folders(directory, file):
             folders_path.append(item_path)
             print("item path is : "+item_path)
             folders_path.append(str(file)+"\\"+item_path)
-            directory_boolean.append("no")
+            if item_path.endswith('.zip'):
+               directory_boolean.append("zip")
+            else:
+               directory_boolean.append("no")
     return folders_path, directory_boolean, #base_path
 """def open_or_edit_file_view_base(request):
     file = request.POST.get('file')
@@ -633,8 +677,8 @@ def open_or_edit_file_view_list_folders(directory, file):
         return render(request, 'edit_file_view.html', {'file_name': file, 'content': content})"""
 
 
-
-def file_uploaded_base(request):
+ 
+"""def file_uploaded_base(request):
     ip = get_client_ip(request)
     file = request.POST.get('file')
     update_cursor = account_conn.cursor()
@@ -654,10 +698,10 @@ def file_uploaded_base(request):
     folder_names = [folder for folder in folders2]  # Same name for display
     folder_types = ["a" for folder in folders2]  # Type of file
     files = zip(folder_paths, folder_names, folder_paths, folder_types, directory_boolean)
-    return render(request, 'file-uploaded.html', {'files': files})
+    return render(request, 'file-uploaded.html', {'files': files})"""
 
 
-def file_uploaded(request, file1):
+"""def file_uploaded(request, file1):
     ip = get_client_ip(request)
     #path = request.GET.get('path')
     print("Path is:", file1)
@@ -726,7 +770,7 @@ def file_uploaded(request, file1):
         fold = fold.replace(directory+"\\", '')
         folders2.append(fold)
     files = [(folder, folder, "a") for folder in folders2]   
-    return render(request, 'file-uploaded.html', {'files': files})'''
+    return render(request, 'file-uploaded.html', {'files': files})'''"""
 
 
 
@@ -754,7 +798,7 @@ def upload_file(request):
         return redirect('login')
     else:
         ip = get_client_ip(request)
-        update_cursor = account_conn.cursor()
+        update_cursor = conn.cursor()
         update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
         for row in update_cursor.fetchall():
             username = row[0]
@@ -776,12 +820,12 @@ def upload_file(request):
                fs.save(file.name, file)
                file_path = fs.path(file.name)
                with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                   cursor = server_conn.cursor()
+                   cursor = conn.cursor()
                    cursor.execute('''
                     INSERT INTO servers (file_name, server_name, server_id, owner)
                     VALUES (?, ?, ?, ?)
                 ''', (filename, servername, subdirectory, username))
-                   server_conn.commit()
+                   conn.commit()
                    zip_ref.extractall(server_file_path)
                    print(filename)
                    return redirect('file_explorer')
@@ -792,21 +836,13 @@ def upload_file(request):
         else:
             return HttpResponse('Failed to upload file')
     
-def start_or_close_server(request):
+"""def start_or_close_server(request):
     exe_path = os.path.join(settings.MEDIA_ROOT, '8Pd0j4fKCO90', 'server', 'PalServer.exe')
     execute_exe(exe_path)
-    return HttpResponse('sucessfully started or closed the server')
+    return HttpResponse('sucessfully started or closed the server')"""
 
-
-
-def get_client_ip(request):
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
-    else:
-        ip = request.META.get('REMOTE_ADDR')
-    return ip
-
+#users able to go to the server monitor page
+#使用者可以到伺服器監控頁面
 def server_monitor(request):
     ip = get_client_ip(request)
     login_status = cache.get(ip+'_login_status')
@@ -815,3 +851,47 @@ def server_monitor(request):
         return redirect('login')
     else:
         return render(request, 'server_monitor.html')
+    
+#to make the users able to upload files
+#使用者可以上傳檔案
+def upload_file_in_explorer(request):
+    ip = get_client_ip(request)
+    login_status = cache.get(ip+'_login_status')
+    print("login status is "+str(login_status))
+    if not login_status == "true":
+        return redirect('login')
+    else:
+        ip = get_client_ip(request)
+        update_cursor = conn.cursor()
+        update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
+        for row in update_cursor.fetchall():
+            username = row[0]
+        print(username)
+        file = request.FILES['upload_file_in_explorer']
+        print("file is "+str(file))
+        servername = request.POST['server_id_string']
+        subdirectory = generate_random_string()
+        print(settings.MEDIA_ROOT)
+        print(subdirectory)
+        fs = FileSystemStorage(location=servername)
+        fs.save(file.name, file)
+        #os.path.join(settings.MEDIA_ROOT, subdirectory, servername)
+        """backup_zip_path = os.path.join(settings.MEDIA_ROOT, subdirectory, 'backup')
+        os.makedirs(server_file_path, exist_ok=True)
+        os.makedirs(backup_zip_path, exist_ok=True)
+        fs = FileSystemStorage(location=backup_zip_path)
+        if file:
+            filename = file.name
+            if filename.__contains__(".zip"):
+               fs.save(file.name, file)
+               file_path = fs.path(file.name)
+               with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                   cursor = conn.cursor()
+                   cursor.execute('''
+                    INSERT INTO servers (file_name, server_name, server_id, owner)
+                    VALUES (?, ?, ?, ?)
+                ''', (filename, servername, subdirectory, username))
+                   conn.commit()
+                   zip_ref.extractall(server_file_path)
+                   print(filename)"""
+        return redirect('file_explorer')

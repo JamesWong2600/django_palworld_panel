@@ -15,24 +15,19 @@ import stat
 import json
 from pathlib import Path
 
-conn = sqlite3.connect('setting_data.db', check_same_thread=False)
-server_conn = sqlite3.connect('servers.db', check_same_thread=False)
-account_conn = sqlite3.connect('account.db', check_same_thread=False)
+conn = sqlite3.connect(os.path.join(settings.DATABASES_ROOT, 'server_data.db'), check_same_thread=False)
 
 
 def rename_file_backend(request):
     file_name = request.POST.get('file')
     new_name = request.POST.get('new_name')
     base_name = request.POST.get('base_name')
-    print("base_name =============================="+base_name)
-    print(file_name)
-    print(new_name)
     ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
+    update_cursor = conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
     for row in update_cursor.fetchall():
         username = row[0]
-    server_cursor = server_conn.cursor()
+    server_cursor = conn.cursor()
     server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
     for rowrow in server_cursor.fetchall():
         server_id = rowrow[0]
@@ -92,12 +87,12 @@ def get_client_ip(request):
 def rename_file_view(request, file_name):
     ip = get_client_ip(request)
     print(file_name)
-    update_cursor = account_conn.cursor()
+    update_cursor = conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
     for row in update_cursor.fetchall():
         username = row[0]
     print(username+ " name")
-    server_cursor = server_conn.cursor()
+    server_cursor = conn.cursor()
     server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
     for rowrow in server_cursor.fetchall():
         server_id = rowrow[0]
@@ -120,12 +115,12 @@ def send_rename(request):
     original_file_name = request.POST['original_file_name']
     print(original_file_name + " original")
     print(new_file_name + " new")
-    update_cursor = account_conn.cursor()
+    update_cursor = conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
     for row in update_cursor.fetchall():
         username = row[0]
     print(username+ " name")
-    server_cursor = server_conn.cursor()
+    server_cursor = conn.cursor()
     server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
     for rowrow in server_cursor.fetchall():
         server_id = rowrow[0]
@@ -150,12 +145,12 @@ def send_rename(request):
 
 def file_uploaded_rename(request):
     ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
+    update_cursor = conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
     for row in update_cursor.fetchall():
         username = row[0]
     print(username+ " name")
-    server_cursor = server_conn.cursor()
+    server_cursor = conn.cursor()
     server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
     for rowrow in server_cursor.fetchall():
         server_id = rowrow[0]

@@ -28,9 +28,7 @@ import psutil
 from django.http import JsonResponse
 from django.core.cache import cache
 
-conn = sqlite3.connect('setting_data.db', check_same_thread=False)
-server_conn = sqlite3.connect('servers.db', check_same_thread=False)
-account_conn = sqlite3.connect('account.db', check_same_thread=False)
+conn = sqlite3.connect(os.path.join(settings.DATABASES_ROOT, 'server_data.db'), check_same_thread=False)
 
 # get the client ip address
 # 獲取用戶端IP地址
@@ -46,11 +44,11 @@ def get_client_ip(request):
 # 獲取exe路徑
 def get_exe(request):
     ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
+    update_cursor = conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
     for row in update_cursor.fetchall():
         username = row[0]
-    server_cursor = server_conn.cursor()
+    server_cursor = conn.cursor()
     server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
     for rowrow in server_cursor.fetchall():
         server_id = rowrow[0]
@@ -74,11 +72,11 @@ def server_control(request):
 # 獲取exe核心路徑
 def get_exe_core(request):
     ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
+    update_cursor = conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
     for row in update_cursor.fetchall():
         username = row[0]
-    server_cursor = server_conn.cursor()
+    server_cursor = conn.cursor()
     server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
     for rowrow in server_cursor.fetchall():
         server_id = rowrow[0]

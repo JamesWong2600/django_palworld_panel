@@ -15,9 +15,7 @@ import stat
 from pathlib import Path
 import re
 
-conn = sqlite3.connect('setting_data.db', check_same_thread=False)
-server_conn = sqlite3.connect('servers.db', check_same_thread=False)
-account_conn = sqlite3.connect('account.db', check_same_thread=False)
+conn = sqlite3.connect(os.path.join(settings.DATABASES_ROOT, 'server_data.db'), check_same_thread=False)
 
 
 
@@ -29,11 +27,11 @@ def delete_file_view(request):
     file_name = request.POST.get('file')
     base_name = request.POST.get('base_name')
     ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
+    update_cursor = conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
     for row in update_cursor.fetchall():
         username = row[0]
-    server_cursor = server_conn.cursor()
+    server_cursor = conn.cursor()
     server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
     for rowrow in server_cursor.fetchall():
         server_id = rowrow[0]
@@ -50,7 +48,8 @@ def delete_file_view(request):
     folder_names = [Path(folder).name for folder in folders2]  # Same name for display
     folder_types = ["a" for folder in folders2]  # Type of file
     files = zip(folder_paths, folder_names, folder_paths, folder_types, directory_boolean)
-    return render(request, 'file-uploaded.html', {'files': files}) 
+    return redirect('file_explorer')
+    #return render(request, 'file-uploaded.html', {'files': files}) 
 
 # to list the folders after the delete action
 # 在刪除操作之後列出文件夾

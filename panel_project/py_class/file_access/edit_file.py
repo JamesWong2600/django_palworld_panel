@@ -14,9 +14,7 @@ import sqlite3
 import stat
 
 
-conn = sqlite3.connect('setting_data.db', check_same_thread=False)
-server_conn = sqlite3.connect('servers.db', check_same_thread=False)
-account_conn = sqlite3.connect('account.db', check_same_thread=False)
+conn = sqlite3.connect(os.path.join(settings.DATABASES_ROOT, 'server_data.db'), check_same_thread=False)
 
 def read_all_text(file_path):
     with open(file_path, 'r') as file:
@@ -54,12 +52,12 @@ def edit_file_view(request):
     #    substring = f"engine\\{file_name}"
     #print(substring)    
     ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
+    update_cursor = conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
     for row in update_cursor.fetchall():
         username = row[0]
     print(username+ " name")
-    server_cursor = server_conn.cursor()
+    server_cursor = conn.cursor()
     server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
     for rowrow in server_cursor.fetchall():
         server_id = rowrow[0]
@@ -92,12 +90,12 @@ def save_edit_notused(request):
     content = request.POST['content']
     base_name = request.POST['base_name']
     ip = get_client_ip(request)
-    update_cursor = account_conn.cursor()
+    update_cursor = conn.cursor()
     update_cursor.execute(f"SELECT username FROM accounts where ip_address = '{ip}'")
     for row in update_cursor.fetchall():
         username = row[0]
     print(username+ " name")
-    server_cursor = server_conn.cursor()
+    server_cursor = conn.cursor()
     server_cursor.execute(f"SELECT server_id, server_name FROM servers where owner = '{username}'")
     print("james_test")
     for rowrow in server_cursor.fetchall():

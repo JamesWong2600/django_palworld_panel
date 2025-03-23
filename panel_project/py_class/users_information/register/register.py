@@ -5,13 +5,11 @@ from django.http import HttpResponse
 from django.conf import settings
 import sqlite3
 from django.core.cache import cache
+import os
 
 
 
-
-conn = sqlite3.connect('setting_data.db', check_same_thread=False)
-server_conn = sqlite3.connect('servers.db', check_same_thread=False)
-account_conn = sqlite3.connect('account.db', check_same_thread=False)
+conn = sqlite3.connect(os.path.join(settings.DATABASES_ROOT, 'server_data.db'), check_same_thread=False)
 
 # user can send the register request to the server
 # 用戶可以發送註冊請求到伺服端
@@ -26,14 +24,14 @@ def register(request):
     elif not len(password) >= 8:
         return render(request, 'register.html',{'password_too_short': 'the password need to be above 8 characters'})
     else:
-        cursor = account_conn.cursor()
-        cursor2 = account_conn.cursor()
+        cursor = conn.cursor()
+        cursor2 = conn.cursor()
         cursor.execute('''
         INSERT INTO accounts (username, email, password, ip_address, login_status)
         VALUES (?, ?, ?, ?, ?)
         ''', (username, email, password, ip, '1'))
         cursor2.execute('''UPDATE accounts SET ip_address = ? WHERE username = ? and password = ?''', (ip, username, password))
-        account_conn.commit()   
+        conn.commit()   
         cache.set(ip+'_login_status', "true", timeout=1800)
         return redirect('main')
 

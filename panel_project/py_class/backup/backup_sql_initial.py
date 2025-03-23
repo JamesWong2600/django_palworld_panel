@@ -12,7 +12,7 @@ import shutil
 import ast
 import sqlite3
 
-servers_backup = sqlite3.connect('servers_backup.db', check_same_thread=False)
+"""servers_backup = sqlite3.connect('servers_backup.db', check_same_thread=False)
 
 def servers_backup_create_table():
     user_account_conn = sqlite3.connect('servers_backup.db', check_same_thread=False)
@@ -25,4 +25,4 @@ def servers_backup_create_table():
     server_name TEXT NOT NULL,
     time_created TEXT NOT NULL     
     )
-    ''')
+    ''')"""

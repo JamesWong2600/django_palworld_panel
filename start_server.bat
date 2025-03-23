@@ -1,6 +1,22 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM Check if Git is installed
+where git >nul 2>nul
+if %errorlevel% neq 0 (
+    echo Git is not installed. Installing Git...
+    winget install Git.Git
+    if !errorlevel! neq 0 (
+        echo Failed to install Git. Please install manually from git-scm.com
+        pause
+        exit /b 1
+    )
+    echo Git installed successfully.
+    REM Refresh PATH
+    refreshenv
+)
+
+
 REM Check if Python is installed
 where python >nul 2>nul
 if %errorlevel% neq 0 (

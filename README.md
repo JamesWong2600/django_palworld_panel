@@ -43,5 +43,7 @@ git clone https://github.com/JamesWong2600/django_palworld_panel.git
 1. please just use this project in LAN network currently otherwise your server might me under threated
    due to the sercurity design
    [請暫時只能在局域網使用此項目，因爲目前網絡安全設計欠佳，如果在公域網使用此項目可能會導致你的伺服器受到威脅]
-
+2. you can watch this video if u have no idea how to setup
+   https://www.youtube.com/watch?v=hY0Bl98FIwU
+   [如果你不知道要如何設置可以看看這個影片]
 

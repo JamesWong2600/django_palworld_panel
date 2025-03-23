@@ -18,6 +18,11 @@ project name: Django_Palword_Panel
 - Users can edit the PalWorldSettings.ini on a specific page
   [用戶可以在遠端操控透過特殊頁面更改PalWorldSettings.ini]
 
+## preinstallation
+
+1. you must install python and pip before use the project
+   [你必須在使用此項目之前先預先安裝python]
+
 ## Installation
 
 ```bash

@@ -1,4 +1,21 @@
 @echo off
+setlocal enabledelayedexpansion
+
+REM Check if Python is installed
+where python >nul 2>nul
+if %errorlevel% neq 0 (
+    echo Python is not installed. Installing Python...
+    winget install Python.Python.3.11
+    if !errorlevel! neq 0 (
+        echo Failed to install Python. Please install manually from python.org
+        pause
+        exit /b 1
+    )
+    echo Python installed successfully.
+    REM Refresh PATH
+    refreshenv
+)
+
 REM Check if venv exists
 IF NOT EXIST "venv" (
     echo Creating virtual environment...

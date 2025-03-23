@@ -48,7 +48,7 @@ call venv\Scripts\activate
 REM Install requirements if they exist
 IF EXIST "requirements.txt" (
     echo Installing requirements...
-    pip install -r requirements.txt
+    python -m pip install -r requirements.txt
 )
 
 REM Change directory and start server
